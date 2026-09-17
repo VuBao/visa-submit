@@ -1,0 +1,9 @@
+{
+  "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
+  "name": "k-anhjobs-visa-submit",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-17",
+  "vars": {
+    "ADMIN_EMAILS": "1102.vubao@gmail.com,hoangkyanh261095@gmail.com"
+  }
+}

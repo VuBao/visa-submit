@@ -1139,18 +1139,6 @@
                         </a>
                     </li>
 
-                    <!-- Visa: menu nghiệp vụ cuối cùng của sidebar -->
-                    <?php
-                    $none = "";
-                    $active = ($com === 'visa') ? 'active' : '';
-                    if(isset($kiemtra) && $kiemtra == true && $func->check_access('visa', 'man', '', null, 'phrase-1')) $none = "d-none";
-                    ?>
-                    <li class="nav-item <?=$none?>">
-                        <a class="nav-link <?=$active?>" href="index.php?com=visa&act=man" title="ビザ申請書類">
-                            <i class="nav-icon text-sm fas fa-passport"></i>
-                            <p>ビザ申請書類</p>
-                        </a>
-                    </li>
                 </ul>
             </nav>
         </div>

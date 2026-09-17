@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ビザ申請書類の提出 | K-ANH</title>
+    <link rel="stylesheet" href="../assets/visa.css" />
+  </head>
+  <body>
+    <main class="visa-page">
+      <div class="visa-shell">
+        <header class="visa-hero">
+          <div class="visa-brand">K-ANH INC.</div>
+          <div class="visa-eyebrow">特定技能1号 / KỸ NĂNG ĐẶC ĐỊNH SỐ 1</div>
+          <h1>ビザ申請書類の提出</h1>
+          <p class="visa-subtitle">Nộp hồ sơ xin visa</p>
+          <p>
+            情報を入力し、必要書類を選択してください。<br /><span
+              >Nhập thông tin và chọn các giấy tờ cần thiết.</span
+            >
+          </p>
+        </header>
+        <div id="visa-alert" class="visa-alert" role="alert" hidden></div>
+        <form
+          id="visa-application-form"
+          class="visa-form"
+          enctype="multipart/form-data"
+          data-endpoint="https://k-anhjobs-visa-submit.kanh-cv.workers.dev/api/visa/submit"
+        >
+          <section class="visa-panel">
+            <div class="visa-section-heading">
+              <span>01</span>
+              <div>
+                <h2>応募者情報</h2>
+                <p>Thông tin ứng viên</p>
+              </div>
+            </div>
+            <div class="visa-fields">
+              <label
+                ><b>お名前 <em>必須</em></b
+                ><span>Họ và tên</span
+                ><input name="full_name" maxlength="191" required /></label
+              ><label
+                ><b>応募先企業 <em>必須</em></b
+                ><span>Tên công ty ứng tuyển</span
+                ><input name="company_name" maxlength="191" required
+              /></label>
+            </div>
+          </section>
+          <section class="visa-panel">
+            <div class="visa-section-heading">
+              <span>02</span>
+              <div>
+                <h2>必要書類チェックリスト</h2>
+                <p>Giấy tờ cần upload theo checklist</p>
+                <p class="visa-checklist-note">
+                  Các mục có dấu <b>必須</b> là bắt buộc. Mỗi mặt giấy tờ tải
+                  thành một tệp riêng.
+                </p>
+              </div>
+            </div>
+            <div class="visa-document-grid" id="visa-documents"></div>
+            <aside class="visa-prep-note">
+              <strong
+                >入社前に準備するもの / Chuẩn bị trước khi vào công ty</strong
+              >
+              <span
+                >MyNumber, mã bảo hiểm lao động, mã Nenkin cơ bản và sổ ngân
+                hàng dùng để trả lương.</span
+              >
+            </aside>
+          </section>
+          <section class="visa-submit-panel">
+            <label class="visa-consent"
+              ><input type="checkbox" name="consent" value="1" required /><span
+                >個人情報の提供に同意します。<small
+                  >Tôi đồng ý cung cấp thông tin để xử lý hồ sơ visa.</small
+                ></span
+              ></label
+            ><button type="submit" class="visa-button">
+              書類を送信する <span>Gửi hồ sơ</span>
+            </button>
+          </section>
+        </form>
+      </div>
+    </main>
+    <script>
+      const docs = {
+        residence_card_front: [
+          "在留カード・表面",
+          "Thẻ ngoại kiều - mặt trước",
+          1,
+        ],
+        residence_card_back: [
+          "在留カード・裏面",
+          "Thẻ ngoại kiều - mặt sau",
+          1,
+        ],
+        passport_vietnam: [
+          "パスポート・身分事項ページ",
+          "Hộ chiếu Việt Nam - mặt thông tin",
+          1,
+        ],
+        passport_residence_status: [
+          "パスポート・在留資格ページ",
+          "Hộ chiếu - tư cách lưu trú Nhật Bản",
+          1,
+        ],
+        insurance_front: ["保険証・表面", "Thẻ bảo hiểm - mặt trước", 1],
+        insurance_back: ["保険証・裏面", "Thẻ bảo hiểm - mặt sau", 1],
+        sankyu_senmonkyu: [
+          "三級・専門級",
+          "Chứng chỉ SANKYU hoặc SENMONKYU",
+          0,
+        ],
+        tokutei_certificate: [
+          "特定技能合格証",
+          "Chứng chỉ Tokutei chuyên ngành",
+          1,
+        ],
+        gensen: ["源泉徴収票", "Phiếu khấu trừ thuế Gensen", 1],
+        tax_certificate: ["課税証明書", "Giấy chứng nhận thuế năm gần nhất", 1],
+        tax_payment_certificate: [
+          "納税証明書",
+          "Giấy chứng nhận đã đóng thuế",
+          1,
+        ],
+        juminhyo_mynumber: [
+          "マイナンバー付の住民票",
+          "Juminhyo có MyNumber",
+          1,
+        ],
+        nenkin_record: ["年金記録照会", "Giấy tra cứu lịch sử Nenkin", 1],
+        insured_record_nofu2: [
+          "被保険者記録照会（納付II）",
+          "Lịch sử đóng Nenkin",
+          1,
+        ],
+        health_check: ["健康診断書", "Giấy khám sức khỏe", 1],
+        photo_3x4: ["証明写真 3×4", "Ảnh thẻ 3×4", 1],
+        kokumin_payment: [
+          "国民健康保険料納付証明書",
+          "Giấy đóng bảo hiểm quốc dân",
+          0,
+        ],
+        student_graduation: [
+          "卒業証明書（見込み可）",
+          "Bằng tốt nghiệp (có thể dùng giấy dự kiến tốt nghiệp)",
+          0,
+        ],
+        student_transcript: [
+          "成績・出席証明書 / 推薦状",
+          "Bảng điểm, chuyên cần hoặc thư giới thiệu",
+          0,
+        ],
+      };
+      document.getElementById("visa-documents").innerHTML = Object.entries(docs)
+        .map(
+          ([k, v]) =>
+            `<article class="visa-document-card ${v[2] ? "is-required" : "is-optional"}"><div class="visa-document-title"><h3>${v[0]}</h3><p>${v[1]}</p></div><div class="visa-required">${v[2] ? "必須 / Bắt buộc" : "該当者のみ / Nếu có"}</div><label class="visa-file-picker"><input type="file" name="documents[${k}]" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" ${v[2] ? "required" : ""}><b>ファイルを選ぶ</b><span>Chọn ảnh hoặc PDF</span><small>JPG, PNG, WebP, PDF · 最大 10 MB</small></label><div class="visa-file-name">未選択 / Chưa chọn</div></article>`,
+        )
+        .join("");
+    </script>
+    <script src="../assets/visa.js"></script>
+  </body>
+</html>

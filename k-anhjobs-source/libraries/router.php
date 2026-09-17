@@ -27,7 +27,6 @@ $router->map('GET',array('admin','admin'), function(){
 	$func->redirect($config['database']['url']."admin/index.php");
 	exit;
 });
-$router->map('GET|POST', 'apply-visa', 'apply-visa', 'apply-visa');
 $router->map('GET|POST', '', 'index', 'home');
 $router->map('GET|POST', 'index.php', 'index', 'index');
 $router->map('GET|POST', 'sitemap.xml', 'sitemap', 'sitemap');
@@ -203,13 +202,6 @@ switch($com)
 	$title_crumb = timkiem;
 	break;
 
-	case 'apply-visa':
-	$source = "visa";
-	$template = "visa/apply";
-	$seo->setSeo('type','object');
-	$title_crumb = 'ビザ申請書類 / Hồ sơ xin visa';
-	break;
-	
 	case 'account':
 	$source = "user";
 	break;

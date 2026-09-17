@@ -821,15 +821,6 @@
             </div>
         </div>
         <?php } ?>
-        <div class="card card-permission card-warning card-outline text-sm">
-            <div class="card-header"><h3 class="card-title">ビザ申請書類 / Quản lý hồ sơ visa</h3></div>
-            <div class="card-body">
-                <div class="custom-control custom-checkbox text-md">
-                    <input type="checkbox" class="custom-control-input" name="dataQuyen[]" id="quyen-visa-man" value="visa_man" <?=(isset($ds_quyen) && in_array('visa_man',$ds_quyen))?'checked':'';?>>
-                    <label for="quyen-visa-man" class="custom-control-label font-weight-normal">Xem và xử lý hồ sơ visa</label>
-                </div>
-            </div>
-        </div>
         <div class="card card-permission card-primary card-outline text-sm">
             <div class="card-header">
                 <h3 class="card-title">Quản lý tin nhắn</h3>

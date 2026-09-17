@@ -11,6 +11,8 @@ k-anhjobs-source/admin/elfinder/php/MySQLStorage.sql
 **/error_log
 **/debug.log
 releases/
+.wrangler/
 
-# Private visa uploads must remain outside the repository/web root
-private_visa_files/
+# Local Google credentials (never commit)
+visa-worker/*service-account*.json
+visa-worker/visa-*.json

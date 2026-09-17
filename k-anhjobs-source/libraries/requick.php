@@ -79,7 +79,7 @@ if(isset($config['permission']) && $config['permission'] == true && isset($_SESS
 			$act != 'save_static' &&
 			$act != 'save_photo')
 		{
-			if($com != 'user' && $com != 'visa') 
+			if($com != 'user')
 			{
 				if($com != '' && $com != 'index')
 				{

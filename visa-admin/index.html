@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Visa Admin | K-ANH</title>
+    <link rel="stylesheet" href="assets/admin.css" />
+  </head>
+  <body>
+    <aside class="sidebar">
+      <div class="logo">K-ANH<br /><small>VISA ADMIN</small></div>
+      <nav>
+        <a class="active" href="#dashboard">Dashboard</a
+        ><a href="#applications">ビザ申請書類</a>
+      </nav>
+      <div class="user">
+        Cloudflare Access<br /><small id="identity">Đang xác thực…</small>
+      </div>
+    </aside>
+    <main class="main">
+      <header class="topbar">
+        <button id="menu" aria-label="Menu">☰</button
+        ><span>Quản lý hồ sơ visa / ビザ申請書類</span>
+      </header>
+      <section id="dashboard" class="view">
+        <div class="page-title">
+          <div>
+            <h1>Dashboard</h1>
+            <p>Danh sách hồ sơ ứng viên</p>
+          </div>
+          <button class="refresh" id="refresh">↻ Làm mới</button>
+        </div>
+        <div class="stats">
+          <div><b id="total">0</b><span>Tổng hồ sơ</span></div>
+          <div><b id="newCount">0</b><span>Hồ sơ mới</span></div>
+          <div><b id="docsCount">0</b><span>Tài liệu</span></div>
+        </div>
+        <div class="card">
+          <div class="toolbar">
+            <input
+              id="search"
+              placeholder="Mã hồ sơ, họ tên hoặc công ty"
+            /><select id="status">
+              <option value="">Tất cả trạng thái</option>
+              <option>Mới / New</option>
+              <option>Đang xử lý</option>
+              <option>Hoàn tất</option>
+              <option>Hủy</option>
+            </select>
+          </div>
+          <div id="error" class="error" hidden></div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Mã hồ sơ</th>
+                  <th>Họ tên</th>
+                  <th>Công ty</th>
+                  <th>Trạng thái</th>
+                  <th>Tài liệu</th>
+                  <th>Ngày nộp</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="rows">
+                <tr>
+                  <td colspan="7" class="loading">Đang tải hồ sơ…</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+      <section id="detail" class="view" hidden>
+        <button class="back" id="back">← Danh sách hồ sơ</button>
+        <div class="page-title">
+          <div>
+            <h1 id="detailName">Chi tiết hồ sơ</h1>
+            <p id="detailCode"></p>
+          </div>
+          <span id="detailStatus" class="badge"></span>
+        </div>
+        <div class="detail-grid">
+          <div class="card">
+            <h2>Thông tin ứng viên</h2>
+            <dl id="profile"></dl>
+            <h2 class="section-gap">Tài liệu đã nộp</h2>
+            <div id="documents" class="documents"></div>
+          </div>
+          <aside class="card side">
+            <h2>Thao tác</h2>
+            <label>Họ và tên<input id="editName" required /></label>
+            <label>Công ty<input id="editCompany" required /></label>
+            <label>Trạng thái<select id="editStatus">
+                <option>Mới / New</option>
+                <option>Đang xử lý</option>
+                <option>Hoàn tất</option>
+                <option>Hủy</option>
+              </select></label
+            ><label>Ghi chú Admin<textarea id="note" rows="5"></textarea></label
+            ><button class="primary" id="save">Lưu thay đổi</button>
+            <button class="danger" id="delete">Xóa hồ sơ</button>
+          </aside>
+        </div>
+      </section>
+    </main>
+    <script src="assets/admin.js"></script>
+  </body>
+</html>

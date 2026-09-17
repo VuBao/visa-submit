@@ -1,0 +1,9 @@
+name = "k-anhjobs-visa-submit"
+main = "src/index.js"
+compatibility_date = "2026-09-17"
+
+# Set these with `wrangler secret put`; never commit their values.
+# GOOGLE_SERVICE_ACCOUNT_EMAIL
+# GOOGLE_PRIVATE_KEY
+# GOOGLE_SHEET_ID
+# GOOGLE_DRIVE_FOLDER_ID

@@ -1,0 +1,19 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "k-anhjobs-visa-admin",
+  "main": "src/index.js",
+  "compatibility_date": "2026-09-16",
+  "observability": {
+    "enabled": true
+  },
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "VISA_API",
+      "service": "k-anhjobs-visa-submit"
+    }
+  ]
+}
