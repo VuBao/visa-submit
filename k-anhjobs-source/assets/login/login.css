@@ -1,0 +1,185 @@
+.wrap-user {
+    width: 100%;
+    max-width: 450px;
+    margin: auto;
+    border: 1px solid rgba(0, 0, 0, .125);
+    border-radius: 1.25rem;
+    background-color: #fff;
+}
+
+.title-user {
+    background-color: #d9edf7;
+    padding: 12px 15px;
+    border-radius: 5px 5px 0px 0px;
+}
+
+.title-user span {
+    color: #31708f;
+}
+
+.title-user a {
+    color: #0056b3;
+    font-size: 12px;
+}
+
+.form-user {
+    padding: 20px;
+}
+
+.input-user {
+    margin-bottom: 0.75rem;
+}
+
+.input-user input {
+    font-size: 14px;
+}
+
+.button-user {
+    margin-bottom: 1rem;
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+}
+
+.button-user input,
+.button-user a {
+    display: block;
+    transition: all linear .5s;
+    border-radius: 5px;
+    font-size: 14px;
+    width: 100%;
+    border: 1px solid #d9e7f3 !important;
+    align-items: center !important;
+    background-color: #fff !important;
+    color: #707b86 !important;
+    font-weight: 700;
+    height: 38px !important;
+    line-height: 38px !important;
+    padding: 0 !important;
+}
+
+.button-user input:hover,
+.button-user a:hover {
+    color: #0056b3 !important;
+    border-color: #0056b3 !important
+}
+
+.checkbox-user,
+.radio-user {
+    cursor: pointer;
+}
+
+.banchuacotaikhoan, .taotaikhoan {
+    font-weight: 600;
+    color: #707b86;
+}
+
+.quenmatkhau {
+    font-weight: 600;
+    color: #0057b3d7;
+}
+
+.checkbox-user label {
+    font-size: 14px;
+    cursor: pointer;
+}
+
+.a-log-social {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center;
+}
+.icon-fb-log {
+    width: 15px;
+    height: 15px;
+    margin-right: 15px;
+    opacity: .7;
+    object-fit: cover;
+}
+
+.checkbox-user label::before,
+.checkbox-user label::after {
+    top: calc(50% - .4rem);
+}
+
+.radio-user {
+    margin-right: 1rem;
+}
+
+.radio-user:last-child {
+    margin-right: 0px;
+}
+
+.radio-user label::before,
+.radio-user label::after {
+    top: calc(50% - 1rem/2);
+}
+
+.note-user {
+    font-size: 14px;
+    padding-top: 0.5rem;
+}
+
+/* Dang nhap */
+.text {
+    text-align: center;
+    padding: 10px 0;
+}
+
+h3.title-login {
+    padding: 20px;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.text-login {
+    padding: 20px;
+}
+
+.bg-img {
+    padding: 15px 0;
+    background-repeat: no-repeat !important;
+    background-size: cover !important;
+    background-position: center !important;
+}
+
+.input-group-login .login-append {
+    height: auto;
+    position: relative;
+}
+
+.input-group {
+    align-items: stretch;
+    display: flex;
+    flex-wrap: wrap;
+    position: relative;
+    width: 100%;
+    border-radius: 8px;
+    border-top-right-radius: 8px !important;
+    border-bottom-right-radius: 8px !important;
+    outline: none;
+}
+
+.icon-user {
+    background-color: transparent;
+    border: none;
+    color: #707b86;
+    font-size: 20px;
+    padding: 0 10px;
+}
+
+.input-group-append {
+    align-items: center;
+    display: flex;
+    right: 0;
+    top: 0;
+    z-index: 4;
+}
+
+.form-group label {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}

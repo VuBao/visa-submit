@@ -1,0 +1,25 @@
+.box-login {
+    -ms-flex-align: center;
+    align-items: center;
+    background: #3a3935;
+    display: -ms-flexbox;
+    display: flex;
+    -ms-flex-direction: column;
+    flex-direction: column;
+    height: 100vh;
+    -ms-flex-pack: center;
+    justify-content: center;
+    position:relative;
+    overflow:hidden;
+    width: 100%;
+}
+.box-login:before{position:absolute;width:1200px;height:1200px;top:calc(50% - 600px);left:50%;margin-left:-600px;content:"";background:transparent url(../images/trongdong.png) no-repeat center center;background-size:100% auto;opacity:.3}
+.box-login:before{-webkit-animation-name:rotate;-webkit-animation-duration:60s;-webkit-animation-iteration-count:infinite;-webkit-animation-timing-function:linear;-moz-animation-name:rotate;-moz-animation-duration:60s;-moz-animation-iteration-count:infinite;-moz-animation-timing-function:linear}
+@-webkit-keyframes rotate{
+		from{-webkit-transform:rotate(0)}
+		to{-webkit-transform:rotate(360deg)}
+}
+@-moz-keyframes rotate{
+		from{-moz-transform:rotate(0)}
+		to{-moz-transform:rotate(360deg)}
+}

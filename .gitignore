@@ -1,0 +1,16 @@
+.env
+data/
+backups/
+*.log
+
+# Production exports, deployment archives, and runtime diagnostics
+*.zip
+kanhjobs.sql
+k-anhjobs-source/libraries/database/*.sql
+k-anhjobs-source/admin/elfinder/php/MySQLStorage.sql
+**/error_log
+**/debug.log
+releases/
+
+# Private visa uploads must remain outside the repository/web root
+private_visa_files/

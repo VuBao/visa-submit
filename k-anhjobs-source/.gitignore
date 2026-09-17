@@ -1,0 +1,6 @@
+caches/
+logs/
+thumbs/
+upload/
+config.php
+*.log
