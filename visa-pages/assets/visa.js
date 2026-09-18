@@ -30,19 +30,23 @@
   const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
   let lastFocusedCard = null;
 
-  const fileFromClipboard = (clipboard) => {
-    if (!clipboard) return null;
-    if (clipboard.files?.length) return clipboard.files[0];
+  const filesFromClipboard = (clipboard) => {
+    if (!clipboard) return [];
+    if (clipboard.files?.length) return Array.from(clipboard.files);
+    const files = [];
     for (const item of clipboard.items || []) {
-      if (item.kind === "file") return item.getAsFile();
+      if (item.kind === "file") files.push(item.getAsFile());
     }
-    return null;
+    return files.filter(Boolean);
   };
 
-  const assignFile = (input, file) => {
-    if (!file) return;
+  const assignFiles = (input, files) => {
+    const selected = Array.from(files || []).filter(Boolean);
+    if (!selected.length) return;
     const transfer = new DataTransfer();
-    transfer.items.add(file);
+    (input.multiple ? selected : selected.slice(0, 1)).forEach((file) =>
+      transfer.items.add(file),
+    );
     input.files = transfer.files;
     input.dispatchEvent(new Event("change", { bubbles: true }));
   };
@@ -64,7 +68,7 @@
     dropZone.addEventListener("drop", (event) => {
       event.preventDefault();
       dropZone.classList.remove("is-dragging");
-      assignFile(input, event.dataTransfer?.files?.[0]);
+      assignFiles(input, event.dataTransfer?.files);
     });
   });
   document.addEventListener("focusin", (event) => {
@@ -72,10 +76,10 @@
   });
   document.addEventListener("paste", (event) => {
     if (!lastFocusedCard) return;
-    const file = fileFromClipboard(event.clipboardData);
-    if (!file) return;
+    const files = filesFromClipboard(event.clipboardData);
+    if (!files.length) return;
     event.preventDefault();
-    assignFile(lastFocusedCard.querySelector('input[type="file"]'), file);
+    assignFiles(lastFocusedCard.querySelector('input[type="file"]'), files);
   });
   form.querySelectorAll("input[type=file]").forEach((input) =>
     input.addEventListener("change", () => {
