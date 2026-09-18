@@ -29,7 +29,9 @@ const DOCUMENTS = {
     "特定技能合格証",
     "Chứng chỉ Tokutei chuyên ngành",
     true,
+    true,
   ],
+  jlpt_certificate: ["日本語能力試験（JLPT）", "Chứng chỉ tiếng Nhật JLPT", false],
   gensen: ["源泉徴収票", "Phiếu khấu trừ thuế Gensen", true],
   tax_certificate: ["課税証明書", "Giấy chứng nhận thuế năm gần nhất", true],
   tax_payment_certificate: ["納税証明書", "Giấy chứng nhận đã đóng thuế", true],
@@ -40,7 +42,7 @@ const DOCUMENTS = {
     "Lịch sử đóng Nenkin",
     true,
   ],
-  health_check: ["健康診断書", "Giấy khám sức khỏe", true],
+  health_check: ["健康診断書", "Giấy khám sức khỏe", true, true],
   photo_3x4: ["証明写真 3×4", "Ảnh thẻ 3×4", true],
   kokumin_payment: [
     "国民健康保険料納付証明書",
@@ -309,7 +311,7 @@ async function createApplicantTab(token, env, profile, uploaded) {
     const preview = `https://drive.google.com/file/d/${encodeURIComponent(item.file.id)}/view`;
     const download = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(item.file.id)}`;
     rows.push([
-      item.def[0],
+      item.def[1],
       item.file.name,
       `=HYPERLINK("${preview}","Mở preview")`,
       `=HYPERLINK("${download}","Download")`,
@@ -411,7 +413,8 @@ function parseDocuments(row) {
     .map((part) => {
       const bits = part.split(":");
       return {
-        document_type: bits[0] || "",
+        document_type: DOCUMENTS[bits[0]]?.[1] || bits[0] || "",
+        document_type_key: bits[0] || "",
         id: bits[1] || "",
         original_name: bits[2] || "",
         mime_type: bits.slice(3).join(":") || "",
@@ -686,8 +689,11 @@ export default {
         return json({ ok: false, error: "Dữ liệu không hợp lệ." }, 422);
       const files = [];
       for (const [type, def] of Object.entries(DOCUMENTS)) {
-        const file = form.get(`documents[${type}]`);
-        if (!(file instanceof File) || file.size === 0) {
+        const inputFiles = [
+          ...form.getAll(`documents[${type}]`),
+          ...form.getAll(`documents[${type}][]`),
+        ].filter((file) => file instanceof File && file.size > 0);
+        if (!inputFiles.length) {
           if (def[2])
             return json(
               { ok: false, error: `${def[1]}: thiếu file bắt buộc.` },
@@ -695,23 +701,25 @@ export default {
             );
           continue;
         }
-        const ext = extension(file.name);
-        const bytes = new Uint8Array(await file.arrayBuffer());
-        if (
-          file.size > MAX_FILE_SIZE ||
-          !ALLOWED.has(file.type) ||
-          !ALLOWED.get(file.type).includes(ext) ||
-          !hasSignature(file.type, bytes) ||
-          /\.(php\d*|phtml|phar|htaccess)$/i.test(file.name)
-        )
-          return json(
-            {
-              ok: false,
-              error: `${def[1]}: file không hợp lệ hoặc vượt quá 10 MB.`,
-            },
-            422,
-          );
-        files.push({ type, file, bytes, def });
+        for (const file of inputFiles) {
+          const ext = extension(file.name);
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          if (
+            file.size > MAX_FILE_SIZE ||
+            !ALLOWED.has(file.type) ||
+            !ALLOWED.get(file.type).includes(ext) ||
+            !hasSignature(file.type, bytes) ||
+            /\.(php\d*|phtml|phar|htaccess)$/i.test(file.name)
+          )
+            return json(
+              {
+                ok: false,
+                error: `${def[1]}: file không hợp lệ hoặc vượt quá 10 MB.`,
+              },
+              422,
+            );
+          files.push({ type, file, bytes, def });
+        }
       }
       const token = await accessToken(env);
       if (await existingSubmission(token, env, submissionId))

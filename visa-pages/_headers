@@ -1,4 +1,4 @@
 /*
   X-Content-Type-Options: nosniff
   Referrer-Policy: strict-origin-when-cross-origin
-  Content-Security-Policy: default-src 'self'; form-action 'self'; connect-src 'self' https:;
+  Content-Security-Policy: default-src 'self'; form-action 'self'; connect-src 'self' https:; img-src 'self' data: blob:; frame-src 'self' blob:; object-src 'self' blob:;
