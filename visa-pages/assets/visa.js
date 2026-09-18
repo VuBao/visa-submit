@@ -23,10 +23,57 @@
     student_graduation: ["卒業証明書（見込み可）", "Bằng tốt nghiệp (có thể dùng giấy dự kiến tốt nghiệp)", 0],
     student_transcript: ["成績・出席証明書 / 推薦状", "Bảng điểm, chuyên cần hoặc thư giới thiệu", 0],
   };
+  const categories = [
+    {
+      ja: "本人確認・個人情報",
+      vi: "Thông tin cá nhân",
+      items: [
+        "residence_card_front",
+        "residence_card_back",
+        "passport_vietnam",
+        "passport_residence_status",
+        "insurance_front",
+        "insurance_back",
+        "health_check",
+        "photo_3x4",
+      ],
+    },
+    {
+      ja: "資格・証明書",
+      vi: "Chứng chỉ",
+      items: [
+        "sankyu_senmonkyu",
+        "tokutei_certificate",
+        "jlpt_certificate",
+        "student_graduation",
+        "student_transcript",
+      ],
+    },
+    {
+      ja: "税務書類",
+      vi: "Hồ sơ thuế",
+      items: [
+        "gensen",
+        "tax_certificate",
+        "tax_payment_certificate",
+        "kokumin_payment",
+      ],
+    },
+    {
+      ja: "年金・住民票",
+      vi: "Nenkin",
+      items: ["juminhyo_mynumber", "nenkin_record", "insured_record_nofu2"],
+    },
+  ];
   const documentGrid = document.getElementById("visa-documents");
-  documentGrid.innerHTML = Object.entries(docs).map(([key, value]) =>
-    `<article class="visa-document-card ${value[2] ? "is-required" : "is-optional"}"><div class="visa-document-title"><h3>${value[0]}</h3><p>${value[1]}</p></div><div class="visa-required">${value[2] ? "必須 / Bắt buộc" : "該当者のみ / Nếu có"}</div><label class="visa-file-picker"><input type="file" name="documents[${key}]${value[3] ? "[]" : ""}" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" ${value[2] ? "required" : ""} ${value[3] ? "multiple" : ""}><b>ファイルを選ぶ</b><span>Kéo thả, Ctrl+V hoặc chọn file</span><small>JPG, PNG, WebP, PDF · 最大 10 MB</small></label><div class="visa-file-name">未選択 / Chưa chọn</div></article>`,
-  ).join("");
+  const documentCard = (key, value) =>
+    `<article class="visa-document-card ${value[2] ? "is-required" : "is-optional"}"><div class="visa-document-title"><h3>${value[0]}</h3><p>${value[1]}</p></div><div class="visa-required">${value[2] ? "必須 / Bắt buộc" : "該当者のみ / Nếu có"}</div><label class="visa-file-picker"><input type="file" name="documents[${key}]${value[3] ? "[]" : ""}" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" ${value[2] ? "required" : ""} ${value[3] ? "multiple" : ""}><b>ファイルを選ぶ</b><span>Kéo thả, Ctrl+V hoặc chọn file</span><small>JPG, PNG, WebP, PDF · 最大 10 MB</small></label><div class="visa-file-name">未選択 / Chưa chọn</div></article>`;
+  documentGrid.innerHTML = categories
+    .map(
+      (category, index) =>
+        `<section class="visa-document-category"><header><span>${String(index + 1).padStart(2, "0")}</span><div><h3>${category.ja}</h3><p>${category.vi}</p></div></header><div class="visa-category-grid">${category.items.map((key) => documentCard(key, docs[key])).join("")}</div></section>`,
+    )
+    .join("");
   const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
   let lastFocusedCard = null;
 
