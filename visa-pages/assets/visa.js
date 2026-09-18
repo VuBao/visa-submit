@@ -66,7 +66,7 @@
       if (!response.ok || !result.ok)
         throw new Error(result.error || "Submit failed");
       form.outerHTML =
-        '<section class="visa-result" role="status"><div class="visa-result-icon">✓</div><h2>提出が完了しました<br><span>Đã gửi hồ sơ thành công</span></h2></section>';
+        `<section class="visa-result" role="status"><div class="visa-result-icon">✓</div><h2>提出が完了しました<br><span>Đã gửi hồ sơ thành công</span></h2><p>Mã hồ sơ / 申請番号: <b>${result.application_code || ""}</b></p></section>`;
     } catch (error) {
       const alert = document.getElementById("visa-alert");
       alert.textContent = error.message;

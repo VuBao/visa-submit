@@ -417,7 +417,14 @@ function parseDocuments(row) {
         mime_type: bits.slice(3).join(":") || "",
       };
     })
-    .filter((item) => item.id);
+    .filter(
+      (item) =>
+        item.id &&
+        (item.mime_type === "image/jpeg" ||
+          item.mime_type === "image/png" ||
+          item.mime_type === "image/webp" ||
+          item.mime_type === "application/pdf"),
+    );
 }
 
 function applicationFromRow(row, index) {
@@ -434,13 +441,49 @@ function applicationFromRow(row, index) {
 }
 
 async function existingSubmission(token, env, submissionId) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(env.GOOGLE_SHEET_ID)}/values/A:A`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(env.GOOGLE_SHEET_ID)}/values/${encodeURIComponent("'Dashboard'!F:F")}`;
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!response.ok) return false;
   const data = await response.json();
-  return (data.values || []).some((row) => row[0] === submissionId);
+  return (data.values || []).some((row) =>
+    String(row[0] || "").includes(`submission_id:${submissionId}`),
+  );
+}
+
+async function applicationCodeExists(token, env, applicationCode) {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(env.GOOGLE_SHEET_ID)}/values/${encodeURIComponent("'Dashboard'!A:A")}`;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) return false;
+  const data = await response.json();
+  return (data.values || []).some((row) => row[0] === applicationCode);
+}
+
+function applicationCodeBase(companyName, date = new Date()) {
+  const company =
+    String(companyName)
+      .normalize("NFKC")
+      .trim()
+      .replace(/\s+/g, "_")
+      .replace(/[^\p{L}\p{N}_-]/gu, "")
+      .slice(0, 50) || "CONG_TY";
+  const dateText = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Tokyo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+  return `${company}_${dateText}`;
+}
+
+async function uniqueApplicationCode(token, env, base) {
+  if (!(await applicationCodeExists(token, env, base))) return base;
+  let suffix = 2;
+  while (await applicationCodeExists(token, env, `${base}_${suffix}`)) suffix += 1;
+  return `${base}_${suffix}`;
 }
 
 function extension(name) {
@@ -672,8 +715,17 @@ export default {
       }
       const token = await accessToken(env);
       if (await existingSubmission(token, env, submissionId))
-        return json({ ok: true, duplicate: true });
-      const folderName = `${fullName} - ${submissionId.slice(0, 8)}`
+        return json({
+          ok: true,
+          duplicate: true,
+          message: "Hồ sơ đã được nhận trước đó.",
+        });
+      const applicationCode = await uniqueApplicationCode(
+        token,
+        env,
+        applicationCodeBase(companyName),
+      );
+      const folderName = `${fullName} - ${applicationCode}`
         .replace(/[\\/*?:\[\]]/g, "-")
         .slice(0, 100);
       const applicantFolder = await createDriveFolder(
@@ -694,10 +746,12 @@ export default {
           ),
         });
       const now = new Date().toISOString();
-      const metadata = uploaded
-        .map(
-          (item) =>
-            `${item.type}:${item.file.id}:${item.file.name}:${item.file.mimeType}`,
+      const metadata = [`submission_id:${submissionId}`]
+        .concat(
+          uploaded.map(
+            (item) =>
+              `${item.type}:${item.file.id}:${item.file.name}:${item.file.mimeType}`,
+          ),
         )
         .join(" | ");
       const folderUrl = `https://drive.google.com/drive/folders/${encodeURIComponent(applicantFolder.id)}`;
@@ -718,7 +772,7 @@ export default {
       }
       try {
         await appendSheet(token, env, [
-          submissionId,
+          applicationCode,
           now,
           fullName,
           companyName,
@@ -737,7 +791,7 @@ export default {
         await createApplicantTab(
           token,
           env,
-          { submissionId, fullName, companyName, submittedAt: now },
+          { submissionId: applicationCode, fullName, companyName, submittedAt: now },
           uploaded,
         );
       } catch (error) {
@@ -747,7 +801,11 @@ export default {
         );
       }
       return new Response(
-        JSON.stringify({ ok: true, message: "Đã gửi hồ sơ thành công." }),
+        JSON.stringify({
+          ok: true,
+          application_code: applicationCode,
+          message: "Đã gửi hồ sơ thành công.",
+        }),
         {
           headers: {
             ...headers,
