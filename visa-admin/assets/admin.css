@@ -316,6 +316,12 @@ th {
 .preview.show {
   display: block;
 }
+.file-warning {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #bd2424;
+  font-size: 13px;
+}
 @media (max-width: 800px) {
   .sidebar {
     width: 70px;

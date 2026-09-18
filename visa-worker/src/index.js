@@ -60,7 +60,7 @@ const json = (body, status = 200) =>
     headers: {
       "content-type": "application/json; charset=utf-8",
       "access-control-allow-origin": "*",
-      "access-control-allow-methods": "GET, PATCH, POST, OPTIONS",
+      "access-control-allow-methods": "GET, PATCH, POST, DELETE, OPTIONS",
       "access-control-allow-headers": "content-type",
     },
   });
@@ -217,7 +217,8 @@ async function createDriveFolder(token, name, parent) {
 }
 
 async function appendSheet(token, env, row) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(env.GOOGLE_SHEET_ID)}/values/A:Z:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
+  const range = "'Dashboard'!A:BA";
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(env.GOOGLE_SHEET_ID)}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
   const response = await fetch(url, {
     method: "POST",
     headers: {
@@ -321,39 +322,19 @@ async function createApplicantTab(token, env, profile, uploaded) {
   await sheetsRequest(
     token,
     env,
-    `/values/${encodeURIComponent(`${quotedTitle}!A1:E${rows.length}`)}:append?valueInputOption=USER_ENTERED&insertDataOption=OVERWRITE`,
-    { method: "POST", body: JSON.stringify({ values: rows }) },
-  );
-  const dashboardTitle = dashboard?.properties?.title || "Dashboard";
-  const tabLink = `https://docs.google.com/spreadsheets/d/${env.GOOGLE_SHEET_ID}/edit#gid=${tabId}`;
-  await sheetsRequest(
-    token,
-    env,
-    `/values/${encodeURIComponent(`'${dashboardTitle.replace(/'/g, "''")}'!A:F`)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        values: [
-          [
-            profile.submittedAt,
-            profile.fullName,
-            profile.companyName,
-            `=HYPERLINK("${tabLink}","MỞ HỒ SƠ")`,
-            "Mới / New",
-            profile.submissionId,
-          ],
-        ],
-      }),
-    },
+    `/values/${encodeURIComponent(`${quotedTitle}!A1:E${rows.length}`)}?valueInputOption=USER_ENTERED`,
+    { method: "PUT", body: JSON.stringify({ values: rows }) },
   );
   return { title, tabId };
 }
 
 async function deleteDriveFile(token, fileId) {
-  await fetch(
+  const response = await fetch(
     `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?supportsAllDrives=true`,
     { method: "DELETE", headers: { Authorization: `Bearer ${token}` } },
   );
+  if (!response.ok && response.status !== 404)
+    throw new Error(`Google Drive delete failed (${response.status})`);
 }
 
 async function driveParentFolder(token, fileId) {
@@ -498,7 +479,7 @@ export default {
     const headers = origin
       ? {
           "access-control-allow-origin": origin,
-          "access-control-allow-methods": "POST, OPTIONS",
+          "access-control-allow-methods": "GET, PATCH, POST, DELETE, OPTIONS",
           "access-control-allow-headers": "content-type",
         }
       : {};

@@ -89,10 +89,25 @@
       $("#documents").innerHTML = d.documents
         .map(
           (x) =>
-            `<article class="document"><div><h3>${esc(x.document_type)}</h3><p>${esc(x.original_name)} · ${esc(x.mime_type)}</p></div><div class="actions"><button data-preview="${esc(x.id)}">Preview</button><button data-download="${esc(x.id)}">Download</button><button data-copy="${esc(x.id)}">Copy</button></div>${x.mime_type.startsWith("image/") ? `<img class="preview show" loading="lazy" src="${API}/api/admin/files/${encodeURIComponent(x.id)}?mode=preview" alt="${esc(x.original_name)}">` : ""}</article>`,
+            `<article class="document"><div><h3>${esc(x.document_type)}</h3><p>${esc(x.original_name)} · ${esc(x.mime_type)}</p></div><div class="actions"><button data-preview="${esc(x.id)}">Preview</button><button data-download="${esc(x.id)}">Download</button><button data-copy="${esc(x.id)}">Copy</button></div>${x.mime_type.startsWith("image/") ? `<img class="preview show" id="preview-${esc(x.id)}" loading="lazy" src="${API}/api/admin/files/${encodeURIComponent(x.id)}?mode=preview" alt="${esc(x.original_name)}">` : ""}</article>`,
         )
         .join("");
       d.documents.forEach((x) => {
+        const image = document.querySelector(
+          `#preview-${CSS.escape(x.id)}`,
+        );
+        if (image) {
+          image.onerror = () => {
+            image.remove();
+            const warning = document.createElement("p");
+            warning.className = "file-warning";
+            warning.textContent = "Ảnh không còn khả dụng trên Drive.";
+            document
+              .querySelector(`[data-preview="${CSS.escape(x.id)}"]`)
+              .closest(".document")
+              .append(warning);
+          };
+        }
         const p = document.querySelector(
           `[data-preview="${CSS.escape(x.id)}"]`,
         );
