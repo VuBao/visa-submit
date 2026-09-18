@@ -24,9 +24,58 @@
   };
   const documentGrid = document.getElementById("visa-documents");
   documentGrid.innerHTML = Object.entries(docs).map(([key, value]) =>
-    `<article class="visa-document-card ${value[2] ? "is-required" : "is-optional"}"><div class="visa-document-title"><h3>${value[0]}</h3><p>${value[1]}</p></div><div class="visa-required">${value[2] ? "必須 / Bắt buộc" : "該当者のみ / Nếu có"}</div><label class="visa-file-picker"><input type="file" name="documents[${key}]" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" ${value[2] ? "required" : ""}><b>ファイルを選ぶ</b><span>Chọn ảnh hoặc PDF</span><small>JPG, PNG, WebP, PDF · 最大 10 MB</small></label><div class="visa-file-name">未選択 / Chưa chọn</div></article>`,
+    `<article class="visa-document-card ${value[2] ? "is-required" : "is-optional"}"><div class="visa-document-title"><h3>${value[0]}</h3><p>${value[1]}</p></div><div class="visa-required">${value[2] ? "必須 / Bắt buộc" : "該当者のみ / Nếu có"}</div><label class="visa-file-picker"><input type="file" name="documents[${key}]" accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf" ${value[2] ? "required" : ""}><b>ファイルを選ぶ</b><span>Kéo thả, Ctrl+V hoặc chọn file</span><small>JPG, PNG, WebP, PDF · 最大 10 MB</small></label><div class="visa-file-name">未選択 / Chưa chọn</div></article>`,
   ).join("");
   const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+  let lastFocusedCard = null;
+
+  const fileFromClipboard = (clipboard) => {
+    if (!clipboard) return null;
+    if (clipboard.files?.length) return clipboard.files[0];
+    for (const item of clipboard.items || []) {
+      if (item.kind === "file") return item.getAsFile();
+    }
+    return null;
+  };
+
+  const assignFile = (input, file) => {
+    if (!file) return;
+    const transfer = new DataTransfer();
+    transfer.items.add(file);
+    input.files = transfer.files;
+    input.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+
+  const fileInputs = form.querySelectorAll("input[type=file]");
+  fileInputs.forEach((input) => {
+    const card = input.closest(".visa-document-card");
+    const dropZone = input.closest(".visa-file-picker");
+    card.addEventListener("click", () => {
+      lastFocusedCard = card;
+    });
+    dropZone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      dropZone.classList.add("is-dragging");
+    });
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("is-dragging");
+    });
+    dropZone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      dropZone.classList.remove("is-dragging");
+      assignFile(input, event.dataTransfer?.files?.[0]);
+    });
+  });
+  document.addEventListener("focusin", (event) => {
+    if (!event.target.closest(".visa-document-card")) lastFocusedCard = null;
+  });
+  document.addEventListener("paste", (event) => {
+    if (!lastFocusedCard) return;
+    const file = fileFromClipboard(event.clipboardData);
+    if (!file) return;
+    event.preventDefault();
+    assignFile(lastFocusedCard.querySelector('input[type="file"]'), file);
+  });
   form.querySelectorAll("input[type=file]").forEach((input) =>
     input.addEventListener("change", () => {
       const output = input

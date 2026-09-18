@@ -195,6 +195,11 @@ body {
   text-align: center;
   cursor: pointer;
 }
+.visa-file-picker.is-dragging {
+  border-color: var(--p);
+  background: #fff1e8;
+  box-shadow: 0 0 0 3px rgba(191, 92, 45, 0.14);
+}
 .visa-file-picker input {
   position: absolute;
   width: 1px;
