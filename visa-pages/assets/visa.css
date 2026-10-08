@@ -389,6 +389,11 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Each upload round fills the checklist panel instead of one grid column. */
+.visa-form .visa-document-grid {
+  display: block;
+}
 .visa-document-card.has-saved-file:before {
   content: "✓";
   color: #237a52;

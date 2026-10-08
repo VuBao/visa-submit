@@ -99,6 +99,11 @@
   const resumeDetails = document.getElementById("visa-resume-details");
   const resumeCodeInput = document.getElementById("visa-resume-code");
   const resumePinInput = document.getElementById("visa-resume-pin");
+  try {
+    localStorage.removeItem("visa_application_code");
+  } catch (_) {
+    // The form no longer relies on persistent browser storage.
+  }
   const resumeButton = document.getElementById("visa-resume-button");
   const resumeStatus = document.getElementById("visa-resume-status");
   const resultDialog = document.getElementById("visa-result-dialog");
@@ -182,7 +187,6 @@
     form.elements.full_name.value = application.full_name || "";
     form.elements.company_name.value = application.company_name || "";
     renderSavedDocuments(application);
-    localStorage.setItem("visa_application_code", application.application_code);
     activeCode.textContent = application.application_code;
     activePin.textContent = pin;
     activeApplication.hidden = false;
@@ -241,12 +245,11 @@
     }
   });
 
-  const requestedCode =
-    new URLSearchParams(location.search).get("resume") ||
-    localStorage.getItem("visa_application_code");
+  const requestedCode = new URLSearchParams(location.search).get("resume");
+  resumeDetails.open = Boolean(requestedCode);
+  resumeCodeInput.value = requestedCode || "";
+  resumePinInput.value = "";
   if (requestedCode) {
-    resumeDetails.open = true;
-    resumeCodeInput.value = requestedCode;
     resumePinInput.focus();
   }
 
