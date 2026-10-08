@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ビザ申請書類の提出 | K-ANH</title>
-    <link rel="stylesheet" href="../assets/visa.css?v=20261008-layout-session" />
+    <link rel="stylesheet" href="../assets/visa.css?v=20261008-free-steps" />
   </head>
   <body>
     <main class="visa-page">
@@ -159,6 +159,14 @@
         </dialog>
       </div>
     </main>
-    <script src="../assets/visa.js?v=20261008-layout-session"></script>
+    <dialog id="visa-entry-dialog" class="visa-result-dialog visa-entry-dialog" aria-labelledby="visa-entry-title">
+      <h2 id="visa-entry-title">ビザ申請書類 / Hồ sơ visa</h2>
+      <p>Bạn muốn tạo hồ sơ mới hay tiếp tục hồ sơ đã có?</p>
+      <div class="visa-dialog-actions">
+        <button id="visa-entry-new" type="button" class="visa-button">Tạo hồ sơ mới</button>
+        <button id="visa-entry-resume" type="button" class="visa-button visa-button-light">Nhập tiếp hồ sơ</button>
+      </div>
+    </dialog>
+    <script src="../assets/visa.js?v=20261008-free-steps"></script>
   </body>
 </html>

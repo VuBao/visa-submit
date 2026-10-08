@@ -569,17 +569,27 @@ body {
   list-style: none;
 }
 .visa-step-list li {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
-  gap: 1px 8px;
-  align-items: center;
-  padding: 10px;
   border: 1px solid #ead5ae;
   border-radius: 12px;
   background: #fffaf1;
   color: #6f6255;
 }
-.visa-step-list li > span {
+.visa-step-list li button {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 1px 8px;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.visa-step-list li button > span {
   display: grid;
   grid-row: span 2;
   place-items: center;
@@ -597,8 +607,12 @@ body {
   color: #47240c;
   box-shadow: 0 0 0 2px #fbd394;
 }
-.visa-step-list .is-current > span { background: #e56712; color: #fff; }
-.visa-step-list .is-complete > span { background: #36835b; color: #fff; }
+.visa-step-list .is-current button > span { background: #e56712; color: #fff; }
+.visa-step-list .is-complete { border-color: #70b88d; background: #eaf6ee; color: #236146; }
+.visa-step-list .is-complete button > span { background: #36835b; color: #fff; }
+.visa-step-list li button:focus-visible { outline: 3px solid #e56712; outline-offset: 2px; }
+.visa-entry-dialog p { color: var(--m); margin: 8px 0 20px; }
+.visa-entry-dialog .visa-dialog-actions { flex-wrap: wrap; }
 .visa-document-category:not([hidden]) { margin-top: 0; padding-top: 0; border-top: 0; }
 .visa-step-status {
   margin: 18px 0 0;

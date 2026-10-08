@@ -30,15 +30,26 @@ async function submit(extraFields = {}, fileField, file) {
 test("all four frontend categories use document types supported by the Worker", () => {
   const frontend = readFileSync(new URL("../../visa-pages/assets/visa.js", import.meta.url), "utf8");
   const backend = readFileSync(new URL("../src/index.js", import.meta.url), "utf8");
+  const admin = readFileSync(new URL("../../visa-admin/assets/admin.js", import.meta.url), "utf8");
   const docs = vm.runInNewContext(`(${frontend.match(/const docs = (\{[\s\S]*?\});\s*const categories/)[1]})`);
   const categories = vm.runInNewContext(`(${frontend.match(/const categories = (\[[\s\S]*?\]);\s*const documentGrid/)[1]})`);
   const supported = vm.runInNewContext(`(${backend.match(/const DOCUMENTS = (\{[\s\S]*?\});\s*const json/)[1]})`);
+  const adminGroups = vm.runInNewContext(`(${admin.match(/const documentGroups = (\[[\s\S]*?\]);\s*const groupIndex/)[1]})`);
   assert.equal(categories.length, 4);
   const displayed = categories.flatMap((category) => category.items);
   assert.equal(new Set(displayed).size, displayed.length);
   assert.deepEqual([...displayed].sort(), Object.keys(docs).sort());
   for (const type of displayed)
     assert.ok(supported[type], `${type} is missing from the Worker`);
+  for (let index = 0; index < categories.length; index++)
+    assert.deepEqual(
+      [...adminGroups[index].types].filter((type) => displayed.includes(type)),
+      [...categories[index].items],
+      `Admin group ${index + 1} differs from the applicant form`,
+    );
+  assert.equal(categories[3].items.at(-1), "other_documents");
+  assert.equal(docs.other_documents[3], 1);
+  assert.equal(supported.other_documents[3], true);
 });
 
 test("missing applicant name is rejected before creating a record", async () => {
@@ -54,7 +65,7 @@ test("unknown document field is rejected instead of silently ignored", async () 
   assert.match(result.body.error, /không được hỗ trợ/);
 });
 
-for (const type of ["student_graduation", "student_transcript"]) {
+for (const type of ["student_graduation", "student_transcript", "other_documents"]) {
   test(`${type} is recognized by the Worker`, async () => {
     const file = new File(["fake"], "sample.png", { type: "image/png" });
     const result = await submit({}, `documents[${type}]`, file);

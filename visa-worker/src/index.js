@@ -65,6 +65,7 @@ const DOCUMENTS = {
     "Bảng điểm, chuyên cần hoặc thư giới thiệu",
     false,
   ],
+  other_documents: ["その他", "Khác", false, true],
 };
 
 const json = (body, status = 200) =>
@@ -575,7 +576,7 @@ async function updateDashboardDocuments(
   await sheetsRequest(
     token,
     env,
-    `/values/${encodeURIComponent(`'Dashboard'!F${rowNumber}:AW${rowNumber}`)}?valueInputOption=USER_ENTERED`,
+    `/values/${encodeURIComponent(`'Dashboard'!F${rowNumber}:AY${rowNumber}`)}?valueInputOption=USER_ENTERED`,
     {
       method: "PUT",
       body: JSON.stringify({

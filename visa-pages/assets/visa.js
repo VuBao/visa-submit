@@ -22,6 +22,7 @@
     kokumin_payment: ["国民健康保険料納付証明書", "Giấy đóng bảo hiểm quốc dân", 0],
     student_graduation: ["卒業証明書（見込み可）", "Bằng tốt nghiệp (có thể dùng giấy dự kiến tốt nghiệp)", 0],
     student_transcript: ["成績・出席証明書 / 推薦状", "Bảng điểm, chuyên cần hoặc thư giới thiệu", 0],
+    other_documents: ["その他", "Khác (có thể chọn nhiều file)", 0, 1],
   };
   const categories = [
     {
@@ -62,7 +63,7 @@
     {
       ja: "年金・住民票",
       vi: "Nenkin",
-      items: ["juminhyo_mynumber", "nenkin_record", "insured_record_nofu2"],
+      items: ["juminhyo_mynumber", "nenkin_record", "insured_record_nofu2", "other_documents"],
     },
   ];
   const documentGrid = document.getElementById("visa-documents");
@@ -78,7 +79,7 @@
   stepList.innerHTML = categories
     .map(
       (category, index) =>
-        `<li data-step="${index}"><span>${index + 1}</span><b>${category.vi}</b><small>${category.ja}</small></li>`,
+        `<li data-step="${index}"><button type="button" data-step-nav="${index}" aria-label="Lượt ${index + 1}: ${category.vi}"><span>${index + 1}</span><b>${category.vi}</b><small>${category.ja}</small></button></li>`,
     )
     .join("");
   const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
@@ -110,6 +111,7 @@
   const resultCode = document.getElementById("visa-result-code");
   const resultPin = document.getElementById("visa-result-pin");
   const resultLink = document.getElementById("visa-result-link");
+  const entryDialog = document.getElementById("visa-entry-dialog");
 
   const showError = (message, target = alertBox) => {
     alertBox.textContent = message;
@@ -127,28 +129,45 @@
   };
 
   const stepButtonLabel = (index) => index === categories.length - 1
-    ? "Lưu lượt 4/4 và hoàn tất"
+    ? "Lưu lượt 4/4"
     : `Lưu lượt ${index + 1}/4 và tiếp tục →`;
+  const refreshStepIndicators = () => {
+    stepList.querySelectorAll("li").forEach((item, position) => {
+      item.classList.toggle("is-current", position === currentStep);
+      item.classList.toggle("is-complete", completedSteps.has(position));
+      const button = item.querySelector("button");
+      if (position === currentStep) button.setAttribute("aria-current", "step");
+      else button.removeAttribute("aria-current");
+    });
+  };
   const setStep = (index, message = "") => {
     currentStep = index;
     lastFocusedCard = null;
     categorySections.forEach((section, position) => {
       section.hidden = position !== index;
     });
-    applicantPanel.hidden = index !== 0;
+    applicantPanel.hidden = index !== 0 && Boolean(resumeSession);
     backButton.hidden = index === 0;
     submitButton.textContent = stepButtonLabel(index);
-    stepList.querySelectorAll("li").forEach((item, position) => {
-      item.classList.toggle("is-current", position === index);
-      item.classList.toggle("is-complete", completedSteps.has(position));
-      if (position === index) item.setAttribute("aria-current", "step");
-      else item.removeAttribute("aria-current");
-    });
+    refreshStepIndicators();
     stepStatus.textContent = message;
     stepStatus.hidden = !message;
   };
   backButton.addEventListener("click", () => {
     if (currentStep > 0) setStep(currentStep - 1);
+  });
+  stepList.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-step-nav]");
+    if (!button || submitButton.disabled) return;
+    const nextStep = Number(button.dataset.stepNav);
+    if (nextStep === currentStep) return;
+    const hasPendingFiles = Array.from(
+      categorySections[currentStep].querySelectorAll('input[type="file"]'),
+    ).some((input) => input.files?.length);
+    setStep(nextStep, hasPendingFiles
+      ? "File ở lượt vừa rời đi chưa được lưu. Hãy quay lại lượt đó và bấm Lưu."
+      : "");
+    documentGrid.scrollIntoView({ behavior: "smooth", block: "start" });
   });
   setStep(0);
 
@@ -159,6 +178,7 @@
   };
 
   const renderSavedDocuments = (application) => {
+    completedSteps.clear();
     form.querySelectorAll(".visa-document-card").forEach((card) => {
       card.classList.remove("has-saved-file");
       delete card.dataset.savedNames;
@@ -167,6 +187,8 @@
     for (const item of application.documents || []) {
       if (!grouped.has(item.type)) grouped.set(item.type, []);
       grouped.get(item.type).push(item.name);
+      const step = categories.findIndex((category) => category.items.includes(item.type));
+      if (step >= 0) completedSteps.add(step);
     }
     for (const [type, names] of grouped) {
       const input = Array.from(form.querySelectorAll('input[type="file"]')).find(
@@ -180,6 +202,7 @@
       output.textContent = `✓ Đã tải: ${names.join(", ")}`;
       output.classList.add("has-file");
     }
+    refreshStepIndicators();
   };
 
   const openApplication = (application, pin) => {
@@ -190,6 +213,7 @@
     activeCode.textContent = application.application_code;
     activePin.textContent = pin;
     activeApplication.hidden = false;
+    setStep(currentStep);
     setResumeStatus(`Đã mở hồ sơ ${application.application_code}.`);
   };
 
@@ -202,16 +226,16 @@
     document.getElementById("visa-result-title").textContent = result.partial
       ? "Hồ sơ đã lưu, còn tài liệu chưa tải"
       : result.complete
-        ? "Đã hoàn tất 4 lượt tải hồ sơ"
-        : result.firstStage
-          ? "Đã lưu lượt 1/4"
+        ? "Đã có tài liệu ở cả 4 lượt"
+        : result.stageNumber
+          ? `Đã lưu lượt ${result.stageNumber}/4`
           : result.resumed
             ? "Đã lưu tài liệu bổ sung"
             : "Đã lưu hồ sơ thành công";
     resultDialog.querySelector(".visa-save-warning").textContent = result.partial
       ? `Đã xác nhận tải ${result.savedCount}/${result.total} file. Hãy lưu mã hồ sơ và PIN, kiểm tra những tài liệu đã lưu rồi gửi lại những file còn thiếu. ${result.error || ""}`
       : result.firstStage
-        ? "Hãy sao chép mã hồ sơ và PIN ngay bây giờ. Đóng hộp thoại để tiếp tục lượt 2/4."
+        ? "Hãy sao chép mã hồ sơ và PIN ngay bây giờ. Bạn có thể chọn bất kỳ nhóm nào để tiếp tục."
       : "Hãy lưu lại mã hồ sơ và PIN để có thể nộp thêm tài liệu lần sau.";
     document.getElementById("visa-copy-result").textContent = "Sao chép thông tin";
     resultDialog.showModal();
@@ -252,6 +276,32 @@
   if (requestedCode) {
     resumePinInput.focus();
   }
+  const entryPromptKey = "visa_entry_prompt_seen_v2";
+  const rememberEntryChoice = () => {
+    try { sessionStorage.setItem(entryPromptKey, "1"); } catch (_) { /* Session storage is optional. */ }
+    entryDialog.close();
+  };
+  document.getElementById("visa-entry-new").addEventListener("click", () => {
+    rememberEntryChoice();
+    try {
+      sessionStorage.removeItem("visa_pending_submission_id");
+      sessionStorage.removeItem("visa_pending_identity");
+    } catch (_) { /* Session storage is optional. */ }
+    resumeDetails.open = false;
+    resumeCodeInput.value = "";
+    resumePinInput.value = "";
+    form.elements.full_name.focus();
+  });
+  document.getElementById("visa-entry-resume").addEventListener("click", () => {
+    rememberEntryChoice();
+    resumeDetails.open = true;
+    resumeDetails.scrollIntoView({ behavior: "smooth", block: "start" });
+    resumeCodeInput.focus();
+  });
+  entryDialog.addEventListener("cancel", (event) => event.preventDefault());
+  let entryChoiceSeen = false;
+  try { entryChoiceSeen = sessionStorage.getItem(entryPromptKey) === "1"; } catch (_) { /* Show prompt. */ }
+  if (!requestedCode && !entryChoiceSeen) entryDialog.showModal();
 
   document.getElementById("visa-close-result").addEventListener("click", () =>
     resultDialog.close(),
@@ -461,7 +511,6 @@
         currentUpload = null;
       }
       if (latestResult?.application) renderSavedDocuments(latestResult.application);
-      completedSteps.add(currentStep);
       clearError();
       if (currentStep === categories.length - 1) {
         showResult({
@@ -469,17 +518,19 @@
           application_code: resumeSession.code,
           pin: resumeSession.pin,
           resume_url: `${location.origin}/apply-visa/?resume=${encodeURIComponent(resumeSession.code)}`,
-          complete: true,
+          complete: completedSteps.size === categories.length,
+          stageNumber: categories.length,
+          firstStage: Boolean(initialResult),
         });
-        setStep(currentStep, "Đã hoàn tất 4 lượt. Bạn có thể quay lại từng lượt để bổ sung tài liệu.");
+        setStep(currentStep, "Lượt 4 đã lưu. Bạn có thể chọn bất kỳ nhóm nào để bổ sung tài liệu.");
       } else {
         const completed = currentStep + 1;
         setStep(
           completed,
-          `${selected.length ? "Đã lưu" : "Đã bỏ qua"} lượt ${completed}/4. Tiếp tục với ${categories[completed].vi}.`,
+          `${selected.length ? "Đã lưu" : "Đã bỏ qua"} lượt ${completed}/4. Bạn có thể chọn bất kỳ nhóm nào để tiếp tục.`,
         );
         if (initialResult)
-          showResult({ ...initialResult, firstStage: true });
+          showResult({ ...initialResult, firstStage: true, stageNumber: completed });
         else documentGrid.scrollIntoView({ behavior: "smooth", block: "start" });
       }
     } catch (error) {

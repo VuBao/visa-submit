@@ -4,6 +4,16 @@
   const API = "";
   const $ = (s) => document.querySelector(s);
   let apps = [];
+  const documentGroups = [
+    { name: "Thông tin cá nhân", ja: "本人確認・個人情報", types: ["residence_card_front", "residence_card_back", "passport_vietnam", "passport_residence_status", "insurance_front", "insurance_back", "health_check", "photo_3x4"] },
+    { name: "Chứng chỉ", ja: "資格・証明書", types: ["sankyu_senmonkyu", "tokutei_certificate", "jlpt_certificate", "student_graduation", "student_transcript", "student_documents"] },
+    { name: "Hồ sơ thuế", ja: "税務書類", types: ["gensen", "tax_certificate", "tax_payment_certificate", "kokumin_payment"] },
+    { name: "Nenkin", ja: "年金・住民票", types: ["juminhyo_mynumber", "nenkin_record", "insured_record_nofu2", "other_documents"] },
+  ];
+  const groupIndex = (type) => {
+    const index = documentGroups.findIndex((group) => group.types.includes(type));
+    return index < 0 ? 3 : index;
+  };
   const esc = (s) =>
     String(s ?? "").replace(
       /[&<>"']/g,
@@ -86,11 +96,25 @@
       $("#note").value = d.application.admin_note || "";
       $("#profile").innerHTML =
         `<dt>Họ và tên</dt><dd>${esc(d.application.full_name)}</dd><dt>Công ty</dt><dd>${esc(d.application.company_name)}</dd><dt>Ngày nộp</dt><dd>${esc(d.application.submitted_at)}</dd>`;
-      $("#documents").innerHTML = d.documents
-        .map(
-          (x) =>
-            `<article class="document"><div><h3>${esc(x.document_type)}</h3><p>${esc(x.original_name)} · ${esc(x.mime_type)}</p></div><div class="actions"><button data-preview="${esc(x.id)}">Preview</button><button data-download="${esc(x.id)}">Download</button><button data-copy="${esc(x.id)}">Copy</button></div>${x.mime_type.startsWith("image/") ? `<img class="preview show" id="preview-${esc(x.id)}" loading="lazy" src="${API}/api/admin/files/${encodeURIComponent(x.id)}?mode=preview" alt="${esc(x.original_name)}">` : ""}</article>`,
+      const grouped = documentGroups.map((_, index) =>
+        d.documents.filter((file) => groupIndex(file.document_type_key) === index),
+      );
+      $("#documentGroups").innerHTML = documentGroups
+        .map((group, index) =>
+          `<div class="document-group-status ${grouped[index].length ? "is-complete" : ""}"><b>${index + 1}. ${esc(group.name)}</b><small>${esc(group.ja)}</small><span>${grouped[index].length ? `${grouped[index].length} tài liệu` : "Chưa có tài liệu"}</span></div>`,
         )
+        .join("");
+      $("#documents").innerHTML = documentGroups
+        .map((group, index) => {
+          const files = grouped[index].sort((a, b) =>
+            group.types.indexOf(a.document_type_key) - group.types.indexOf(b.document_type_key),
+          );
+          return `<section class="document-section"><h3>${index + 1}. ${esc(group.name)} / ${esc(group.ja)}</h3>${files.length
+            ? files.map((x) =>
+              `<article class="document"><div><h3>${esc(x.document_type)}</h3><p>${esc(x.original_name)} · ${esc(x.mime_type)}</p></div><div class="actions"><button data-preview="${esc(x.id)}">Preview</button><button data-download="${esc(x.id)}">Download</button><button data-copy="${esc(x.id)}">Copy</button></div>${x.mime_type.startsWith("image/") ? `<img class="preview show" id="preview-${esc(x.id)}" loading="lazy" src="${API}/api/admin/files/${encodeURIComponent(x.id)}?mode=preview" alt="${esc(x.original_name)}">` : ""}</article>`,
+            ).join("")
+            : '<p class="document-empty">Chưa có tài liệu</p>'}</section>`;
+        })
         .join("");
       d.documents.forEach((x) => {
         const image = document.querySelector(
@@ -121,6 +145,7 @@
             );
       });
     } catch (e) {
+      $("#documentGroups").innerHTML = "";
       $("#documents").innerHTML = `<div class="error">${esc(e.message)}</div>`;
     }
   }
