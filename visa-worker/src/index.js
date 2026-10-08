@@ -350,17 +350,25 @@ async function createDriveFolder(token, name, parent) {
 }
 
 async function appendSheet(token, env, row) {
-  const range = "'Dashboard'!A:BA";
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(env.GOOGLE_SHEET_ID)}/values/${encodeURIComponent(range)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "content-type": "application/json",
-    },
-    body: JSON.stringify({ values: [row] }),
-  });
-  if (!response.ok) throw new Error("Google Sheets write failed");
+  // The existing Dashboard has populated cells beyond its visible records.
+  // values.append can therefore acknowledge a write without placing the
+  // application in column A. Write the next verified free row explicitly.
+  let rows = await dashboardRows(token, env);
+  if (rows.some((item) => item[0] === row[0])) return;
+  const lastUsedRow = rows.reduce(
+    (last, item, index) => item.some((cell) => cell !== "") ? index + 1 : last,
+    0,
+  );
+  const rowNumber = Math.max(2, lastUsedRow + 1);
+  await sheetsRequest(
+    token,
+    env,
+    `/values/${encodeURIComponent(`'Dashboard'!A${rowNumber}`)}?valueInputOption=USER_ENTERED`,
+    { method: "PUT", body: JSON.stringify({ values: [row] }) },
+  );
+  rows = await dashboardRows(token, env);
+  if (!rows.some((item) => item[0] === row[0]))
+    throw new Error("Google Sheets write verification failed");
 }
 
 async function sheetsRequest(token, env, path, init = {}) {
@@ -523,7 +531,7 @@ function adminIdentity(request, env) {
 }
 
 async function dashboardRows(token, env) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(env.GOOGLE_SHEET_ID)}/values/${encodeURIComponent("'Dashboard'!A1:BA1000")}?valueRenderOption=FORMATTED_VALUE`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(env.GOOGLE_SHEET_ID)}/values/${encodeURIComponent("'Dashboard'!A1:BA")}?valueRenderOption=FORMATTED_VALUE`;
   const response = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -568,9 +576,22 @@ async function updateDashboardDocuments(
   submissionId,
   folderId,
   documents,
+  profile,
 ) {
-  const rows = await dashboardRows(token, env);
-  const index = rows.findIndex((row) => row[0] === applicationCode);
+  let rows = await dashboardRows(token, env);
+  let index = rows.findIndex((row) => row[0] === applicationCode);
+  if (index < 0 && profile) {
+    await appendSheet(token, env, [
+      applicationCode,
+      profile.created_at,
+      profile.full_name,
+      profile.company_name,
+      "Mới / New",
+      ...dashboardDocumentCells(submissionId, folderId, documents),
+    ]);
+    rows = await dashboardRows(token, env);
+    index = rows.findIndex((row) => row[0] === applicationCode);
+  }
   if (index < 0) throw new Error("Application row not found");
   const rowNumber = index + 1;
   await sheetsRequest(
@@ -1071,6 +1092,7 @@ export default {
             storedApplication.submission_id,
             storedApplication.folder_id,
             documents,
+            storedApplication,
           );
           await env.DB.prepare(
             "UPDATE applications SET documents_json = ?, updated_at = ? WHERE application_code = ?",
