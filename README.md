@@ -70,7 +70,7 @@ Platform submit visa for K-Anh Company
 
 ## Visa submission (Cloudflare + Google)
 
-The applicant UI is in [visa-pages](visa-pages) and the Google Sheets/Drive integration Worker is in [visa-worker](visa-worker). The Worker keeps Google credentials in Cloudflare secrets, validates JPG/JPEG/PNG/WEBP/PDF uploads up to 10 MB, uploads them to a private Drive folder, and appends metadata to a private Sheet. No PHP/MariaDB/D1/R2/admin dashboard is used for this flow.
+The applicant UI is in [visa-pages](visa-pages) and the Google Sheets/Drive integration Worker is in [visa-worker](visa-worker). The Worker keeps Google credentials in Cloudflare secrets, validates JPG/JPEG/PNG/WEBP/PDF uploads up to 10 MB per file, uploads them to a private Drive folder, and appends metadata to a private Sheet. Cloudflare D1 stores the application code, hashed PIN, and document state for applicants who return to add files. The applicant form sends files one at a time so a mobile upload does not combine all documents into one large request.
 
 The Google Sheet ID and Google Drive folder ID are deployment configuration only:
 set them as Cloudflare Worker secrets/variables and do not commit their real values. The optional Apps Script in [visa-sheet-apps-script](visa-sheet-apps-script) must be bound directly to the target spreadsheet; it does not contain a Sheet ID.

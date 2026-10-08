@@ -1,4 +1,5 @@
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const PIN_HASH_ITERATIONS = 100000;
 const ALLOWED = new Map([
   ["image/jpeg", ["jpg", "jpeg"]],
   ["image/png", ["png"]],
@@ -9,41 +10,41 @@ const DOCUMENTS = {
   residence_card_front: [
     "在留カード・表面",
     "Thẻ ngoại kiều - mặt trước",
-    true,
+    false,
   ],
-  residence_card_back: ["在留カード・裏面", "Thẻ ngoại kiều - mặt sau", true],
+  residence_card_back: ["在留カード・裏面", "Thẻ ngoại kiều - mặt sau", false],
   passport_vietnam: [
     "パスポート・身分事項ページ",
     "Hộ chiếu Việt Nam - trang thông tin",
-    true,
+    false,
   ],
   passport_residence_status: [
     "パスポート・在留資格ページ",
     "Hộ chiếu - trang tư cách lưu trú Nhật Bản",
-    true,
+    false,
   ],
-  insurance_front: ["保険証・表面", "Thẻ bảo hiểm - mặt trước", true],
-  insurance_back: ["保険証・裏面", "Thẻ bảo hiểm - mặt sau", true],
+  insurance_front: ["保険証・表面", "Thẻ bảo hiểm - mặt trước", false],
+  insurance_back: ["保険証・裏面", "Thẻ bảo hiểm - mặt sau", false],
   sankyu_senmonkyu: ["三級・専門級", "Chứng chỉ SANKYU hoặc SENMONKYU", false],
   tokutei_certificate: [
     "特定技能合格証",
     "Chứng chỉ Tokutei chuyên ngành",
-    true,
+    false,
     true,
   ],
   jlpt_certificate: ["日本語能力試験（JLPT）", "Chứng chỉ tiếng Nhật JLPT", false],
-  gensen: ["源泉徴収票", "Phiếu khấu trừ thuế Gensen", true],
-  tax_certificate: ["課税証明書", "Giấy chứng nhận thuế năm gần nhất", true],
-  tax_payment_certificate: ["納税証明書", "Giấy chứng nhận đã đóng thuế", true],
-  juminhyo_mynumber: ["マイナンバー付の住民票", "Juminhyo có MyNumber", true],
-  nenkin_record: ["年金記録照会", "Giấy tra cứu lịch sử Nenkin", true],
+  gensen: ["源泉徴収票", "Phiếu khấu trừ thuế Gensen", false],
+  tax_certificate: ["課税証明書", "Giấy chứng nhận thuế năm gần nhất", false],
+  tax_payment_certificate: ["納税証明書", "Giấy chứng nhận đã đóng thuế", false],
+  juminhyo_mynumber: ["マイナンバー付の住民票", "Juminhyo có MyNumber", false],
+  nenkin_record: ["年金記録照会", "Giấy tra cứu lịch sử Nenkin", false],
   insured_record_nofu2: [
     "被保険者記録照会（納付II）",
     "Lịch sử đóng Nenkin",
-    true,
+    false,
   ],
-  health_check: ["健康診断書", "Giấy khám sức khỏe", true, true],
-  photo_3x4: ["証明写真 3×4", "Ảnh thẻ 3×4", true],
+  health_check: ["健康診断書", "Giấy khám sức khỏe", false, true],
+  photo_3x4: ["証明写真 3×4", "Ảnh thẻ 3×4", false],
   kokumin_payment: [
     "国民健康保険料納付証明書",
     "Giấy đóng bảo hiểm quốc dân",
@@ -71,6 +72,104 @@ function b64url(bytes) {
   let s = "";
   for (const b of bytes) s += String.fromCharCode(b);
   return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function randomPin() {
+  const bytes = new Uint32Array(1);
+  crypto.getRandomValues(bytes);
+  return String(bytes[0] % 1000000).padStart(6, "0");
+}
+
+function randomSalt() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return b64url(bytes);
+}
+
+async function pinHash(pin, salt) {
+  const material = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(pin),
+    "PBKDF2",
+    false,
+    ["deriveBits"],
+  );
+  const bits = await crypto.subtle.deriveBits(
+    {
+      name: "PBKDF2",
+      hash: "SHA-256",
+      salt: new TextEncoder().encode(salt),
+      iterations: PIN_HASH_ITERATIONS,
+    },
+    material,
+    256,
+  );
+  return b64url(new Uint8Array(bits));
+}
+
+function sameText(left, right) {
+  const a = new TextEncoder().encode(String(left));
+  const b = new TextEncoder().encode(String(right));
+  if (a.length !== b.length) return false;
+  let different = 0;
+  for (let index = 0; index < a.length; index++) different |= a[index] ^ b[index];
+  return different === 0;
+}
+
+async function authenticateApplication(env, applicationCode, pin) {
+  const application = await env.DB.prepare(
+    "SELECT * FROM applications WHERE application_code = ?",
+  )
+    .bind(applicationCode)
+    .first();
+  if (!application) return { error: "Mã hồ sơ hoặc PIN không đúng.", status: 401 };
+  const now = Date.now();
+  if (Number(application.locked_until || 0) > now)
+    return {
+      error: "Đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.",
+      status: 429,
+    };
+  const valid = sameText(await pinHash(pin, application.pin_salt), application.pin_hash);
+  if (!valid) {
+    const attempts = Number(application.failed_attempts || 0) + 1;
+    const lockedUntil = attempts >= 5 ? now + 15 * 60 * 1000 : null;
+    await env.DB.prepare(
+      "UPDATE applications SET failed_attempts = ?, locked_until = ? WHERE application_code = ?",
+    )
+      .bind(attempts >= 5 ? 0 : attempts, lockedUntil, applicationCode)
+      .run();
+    return { error: "Mã hồ sơ hoặc PIN không đúng.", status: 401 };
+  }
+  if (application.failed_attempts || application.locked_until)
+    await env.DB.prepare(
+      "UPDATE applications SET failed_attempts = 0, locked_until = NULL WHERE application_code = ?",
+    )
+      .bind(applicationCode)
+      .run();
+  return { application };
+}
+
+function savedDocuments(application) {
+  try {
+    const documents = JSON.parse(application.documents_json || "[]");
+    return Array.isArray(documents) ? documents : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function publicApplication(application) {
+  return {
+    application_code: application.application_code,
+    full_name: application.full_name,
+    company_name: application.company_name,
+    updated_at: application.updated_at,
+    documents: savedDocuments(application).map((item) => ({
+      type: item.type,
+      name: item.name,
+      mime_type: item.mimeType,
+    })),
+  };
 }
 
 function pemBytes(pem) {
@@ -157,8 +256,29 @@ async function accessToken(env) {
     env.GOOGLE_OAUTH_CLIENT_SECRET &&
     env.GOOGLE_OAUTH_REFRESH_TOKEN
   ) {
-    return oauthAccessToken(env);
+    try {
+      return await oauthAccessToken(env);
+    } catch (error) {
+      // The OAuth refresh token may be revoked or expire. The service account
+      // is deliberately configured as the durable integration identity and
+      // has access only to the shared Sheet and private Drive folder.
+      if (env.GOOGLE_SERVICE_ACCOUNT_EMAIL && env.GOOGLE_PRIVATE_KEY) {
+        console.warn("Google OAuth refresh failed; using service account.");
+        return serviceAccountAccessToken(env);
+      }
+      throw error;
+    }
   }
+  return serviceAccountAccessToken(env);
+}
+
+async function uploadAccessToken(env) {
+  if (
+    env.GOOGLE_OAUTH_CLIENT_ID &&
+    env.GOOGLE_OAUTH_CLIENT_SECRET &&
+    env.GOOGLE_OAUTH_REFRESH_TOKEN
+  )
+    return oauthAccessToken(env);
   return serviceAccountAccessToken(env);
 }
 
@@ -400,6 +520,61 @@ async function dashboardRows(token, env) {
   return (await response.json()).values || [];
 }
 
+function dashboardDocumentCells(submissionId, folderId, documents) {
+  const metadata = [`submission_id:${submissionId}`]
+    .concat(
+      documents.map(
+        (item) => `${item.type}:${item.id}:${item.name}:${item.mimeType}`,
+      ),
+    )
+    .join(" | ");
+  const folderUrl = `https://drive.google.com/drive/folders/${encodeURIComponent(folderId)}`;
+  const fileColumns = [];
+  for (const [type] of Object.entries(DOCUMENTS)) {
+    const item = documents.find((document) => document.type === type);
+    if (!item) {
+      fileColumns.push("", "");
+      continue;
+    }
+    const previewUrl = `https://drive.google.com/file/d/${encodeURIComponent(item.id)}/view`;
+    const downloadUrl = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(item.id)}`;
+    fileColumns.push(
+      `=HYPERLINK("${previewUrl}","Preview / Xem")`,
+      `=HYPERLINK("${downloadUrl}","Download / Tải")`,
+    );
+  }
+  return [
+    metadata,
+    `=HYPERLINK("${folderUrl}","Folder hồ sơ")`,
+    ...fileColumns,
+  ];
+}
+
+async function updateDashboardDocuments(
+  token,
+  env,
+  applicationCode,
+  submissionId,
+  folderId,
+  documents,
+) {
+  const rows = await dashboardRows(token, env);
+  const index = rows.findIndex((row) => row[0] === applicationCode);
+  if (index < 0) throw new Error("Application row not found");
+  const rowNumber = index + 1;
+  await sheetsRequest(
+    token,
+    env,
+    `/values/${encodeURIComponent(`'Dashboard'!F${rowNumber}:AS${rowNumber}`)}?valueInputOption=USER_ENTERED`,
+    {
+      method: "PUT",
+      body: JSON.stringify({
+        values: [dashboardDocumentCells(submissionId, folderId, documents)],
+      }),
+    },
+  );
+}
+
 function parseDocuments(row) {
   const text =
     row.find(
@@ -519,6 +694,27 @@ function hasSignature(mime, bytes) {
   return false;
 }
 
+function submissionErrorMessage(error) {
+  const detail = error instanceof Error ? error.message : String(error);
+  if (/OAuth authentication failed|Google authentication failed/i.test(detail))
+    return "Không thể xác thực với Google Drive/Sheets. Quản trị viên cần kiểm tra lại kết nối Google.";
+  if (/folder creation failed/i.test(detail))
+    return "Không thể tạo thư mục hồ sơ trên Google Drive. Quản trị viên cần kiểm tra quyền ghi của thư mục Drive.";
+  if (/Drive upload failed/i.test(detail))
+    return "Không thể tải tài liệu lên Google Drive. Vui lòng kiểm tra file và thử lại.";
+  if (/Sheets write failed|Sheets API failed/i.test(detail))
+    return "Không thể ghi hồ sơ vào Google Sheets. Quản trị viên cần kiểm tra quyền truy cập bảng tính.";
+  if (/Application row not found/i.test(detail))
+    return "Không tìm thấy hồ sơ tương ứng trong bảng quản lý. Vui lòng liên hệ quản trị viên.";
+  if (/D1|database|SQLITE/i.test(detail))
+    return "Không thể lưu mã hồ sơ và PIN vào cơ sở dữ liệu. Vui lòng thử lại sau.";
+  const safeDetail = detail
+    .replace(/https?:\/\/\S+/gi, "dịch vụ bên ngoài")
+    .replace(/[\r\n]+/g, " ")
+    .slice(0, 180);
+  return `Không thể xử lý hồ sơ. Lý do kỹ thuật: ${safeDetail || "không xác định"}.`;
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get("Origin");
@@ -531,6 +727,35 @@ export default {
       : {};
     if (request.method === "OPTIONS") return new Response(null, { headers });
     const url = new URL(request.url);
+    if (url.pathname === "/api/visa/login" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const applicationCode = String(body.application_code || "").trim();
+        const pin = String(body.pin || "").trim();
+        if (!applicationCode || !/^\d{6}$/.test(pin))
+          return json({ ok: false, error: "Vui lòng nhập mã hồ sơ và PIN 6 số." }, 422);
+        const authentication = await authenticateApplication(
+          env,
+          applicationCode,
+          pin,
+        );
+        if (!authentication.application)
+          return json(
+            { ok: false, error: authentication.error },
+            authentication.status,
+          );
+        return json({
+          ok: true,
+          application: publicApplication(authentication.application),
+        });
+      } catch (error) {
+        console.error(
+          "Applicant login failed:",
+          error instanceof Error ? error.message : String(error),
+        );
+        return json({ ok: false, error: "Không thể mở hồ sơ. Vui lòng thử lại." }, 500);
+      }
+    }
     if (url.pathname.startsWith("/api/admin/")) {
       const identity = adminIdentity(request, env);
       if (!identity)
@@ -607,6 +832,11 @@ export default {
             }),
           });
           if (!update.ok) throw new Error("Google Sheets update failed");
+          await env.DB.prepare(
+            "UPDATE applications SET full_name = ?, company_name = ?, updated_at = ? WHERE application_code = ?",
+          )
+            .bind(fullName, companyName, new Date().toISOString(), code)
+            .run();
           return json({ ok: true });
         }
         if (
@@ -616,9 +846,14 @@ export default {
           if (!found)
             return json({ ok: false, error: "Application not found." }, 404);
           const documents = parseDocuments(found.row);
-          const folderId = documents[0]
-            ? await driveParentFolder(token, documents[0].id)
-            : null;
+          const storedApplication = await env.DB.prepare(
+            "SELECT folder_id FROM applications WHERE application_code = ?",
+          )
+            .bind(code)
+            .first();
+          const folderId =
+            storedApplication?.folder_id ||
+            (documents[0] ? await driveParentFolder(token, documents[0].id) : null);
           await Promise.all(
             documents.map((document) => deleteDriveFile(token, document.id)),
           );
@@ -627,6 +862,11 @@ export default {
             await deleteDriveFile(token, folderId);
           await deleteApplicantTab(token, env, code);
           await clearDashboardRow(token, env, found.index + 1);
+          await env.DB.prepare(
+            "DELETE FROM applications WHERE application_code = ?",
+          )
+            .bind(code)
+            .run();
           return json({ ok: true });
         }
         if (
@@ -665,19 +905,38 @@ export default {
       return json({ ok: false, error: "Not found" }, 404);
     try {
       const form = await request.formData();
-      const fullName = String(form.get("full_name") || "").trim();
-      const companyName = String(form.get("company_name") || "").trim();
-      const submissionId = String(form.get("submission_id") || "").trim();
-      if (
-        !fullName ||
-        !companyName ||
-        !submissionId ||
-        form.get("consent") !== "1"
-      )
+      const resumeCode = String(form.get("resume_code") || "").trim();
+      const resumePin = String(form.get("resume_pin") || "").trim();
+      let storedApplication = null;
+      if (resumeCode || resumePin) {
+        if (!resumeCode || !/^\d{6}$/.test(resumePin))
+          return json({ ok: false, error: "Mã hồ sơ hoặc PIN không hợp lệ." }, 422);
+        const authentication = await authenticateApplication(
+          env,
+          resumeCode,
+          resumePin,
+        );
+        if (!authentication.application)
+          return json(
+            { ok: false, error: authentication.error },
+            authentication.status,
+          );
+        storedApplication = authentication.application;
+      }
+      const fullName = storedApplication
+        ? storedApplication.full_name
+        : String(form.get("full_name") || "").trim();
+      const companyName = storedApplication
+        ? storedApplication.company_name
+        : String(form.get("company_name") || "").trim();
+      const submissionId = storedApplication
+        ? storedApplication.submission_id
+        : String(form.get("submission_id") || "").trim();
+      if (!fullName || !companyName || !submissionId)
         return json(
           {
             ok: false,
-            error: "Vui lòng nhập đủ thông tin và đồng ý cung cấp thông tin.",
+            error: "Vui lòng nhập họ tên và tên công ty ứng tuyển.",
           },
           422,
         );
@@ -687,6 +946,50 @@ export default {
         !/^[a-zA-Z0-9-]{16,80}$/.test(submissionId)
       )
         return json({ ok: false, error: "Dữ liệu không hợp lệ." }, 422);
+      if (!storedApplication) {
+        const previous = await env.DB.prepare(
+          "SELECT * FROM applications WHERE submission_id = ?",
+        )
+          .bind(submissionId)
+          .first();
+        if (previous) {
+          if (previous.full_name !== fullName || previous.company_name !== companyName)
+            return json({ ok: false, error: "Thông tin lần gửi trước không khớp." }, 409);
+          if (
+            Array.from(form.entries()).some(
+              ([key, value]) =>
+                key.startsWith("documents[") && value instanceof File && value.size > 0,
+            )
+          )
+            return json(
+              { ok: false, error: "Hồ sơ đã lưu trước đó. Vui lòng mở lại hồ sơ để kiểm tra tài liệu trước khi gửi tiếp." },
+              409,
+            );
+          // A mobile connection can drop after the row is committed but before
+          // the client receives its PIN. The unguessable submission ID allows
+          // that same browser session to recover the existing application.
+          const pin = randomPin();
+          const salt = randomSalt();
+          await env.DB.prepare(
+            "UPDATE applications SET pin_salt = ?, pin_hash = ?, failed_attempts = 0, locked_until = NULL WHERE submission_id = ?",
+          )
+            .bind(salt, await pinHash(pin, salt), submissionId)
+            .run();
+          const publicOrigin =
+            origin && /^https?:\/\//i.test(origin)
+              ? origin
+              : "https://k-anhjobs-visa.pages.dev";
+          return json({
+            ok: true,
+            recovered: true,
+            application_code: previous.application_code,
+            pin,
+            resume_url: `${publicOrigin}/apply-visa/?resume=${encodeURIComponent(previous.application_code)}`,
+            application: publicApplication(previous),
+            message: "Đã khôi phục hồ sơ của lần gửi trước.",
+          });
+        }
+      }
       const files = [];
       for (const [type, def] of Object.entries(DOCUMENTS)) {
         const inputFiles = [
@@ -721,13 +1024,76 @@ export default {
           files.push({ type, file, bytes, def });
         }
       }
-      const token = await accessToken(env);
-      if (await existingSubmission(token, env, submissionId))
+      const token = await uploadAccessToken(env);
+      if (storedApplication) {
+        const uploaded = [];
+        for (const item of files)
+          uploaded.push({
+            type: item.type,
+            file: await driveUpload(
+              token,
+              env,
+              item,
+              `${item.type}-${item.file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`,
+              storedApplication.folder_id,
+            ),
+          });
+        const addedDocuments = uploaded.map((item) => ({
+          type: item.type,
+          id: item.file.id,
+          name: item.file.name,
+          mimeType: item.file.mimeType,
+        }));
+        const documents = savedDocuments(storedApplication).concat(addedDocuments);
+        const now = new Date().toISOString();
+        try {
+          await updateDashboardDocuments(
+            token,
+            env,
+            storedApplication.application_code,
+            storedApplication.submission_id,
+            storedApplication.folder_id,
+            documents,
+          );
+          await env.DB.prepare(
+            "UPDATE applications SET documents_json = ?, updated_at = ? WHERE application_code = ?",
+          )
+            .bind(
+              JSON.stringify(documents),
+              now,
+              storedApplication.application_code,
+            )
+            .run();
+        } catch (error) {
+          await Promise.all(
+            uploaded.map((item) => deleteDriveFile(token, item.file.id)),
+          );
+          throw error;
+        }
+        const publicOrigin =
+          origin && /^https?:\/\//i.test(origin)
+            ? origin
+            : "https://k-anhjobs-visa.pages.dev";
         return json({
           ok: true,
-          duplicate: true,
-          message: "Hồ sơ đã được nhận trước đó.",
+          resumed: true,
+          application_code: storedApplication.application_code,
+          resume_url: `${publicOrigin}/apply-visa/?resume=${encodeURIComponent(storedApplication.application_code)}`,
+          application: {
+            ...publicApplication({
+              ...storedApplication,
+              documents_json: JSON.stringify(documents),
+              updated_at: now,
+            }),
+          },
+          message: "Đã lưu tài liệu bổ sung.",
         });
+      }
+      if (await existingSubmission(token, env, submissionId))
+        return json(
+          { ok: false, error: "Hồ sơ đã được nhận trước đó. Vui lòng liên hệ quản trị viên để mở lại." },
+          409,
+        );
       const applicationCode = await uniqueApplicationCode(
         token,
         env,
@@ -753,46 +1119,57 @@ export default {
             applicantFolder.id,
           ),
         });
+      const documents = uploaded.map((item) => ({
+        type: item.type,
+        id: item.file.id,
+        name: item.file.name,
+        mimeType: item.file.mimeType,
+      }));
       const now = new Date().toISOString();
-      const metadata = [`submission_id:${submissionId}`]
-        .concat(
-          uploaded.map(
-            (item) =>
-              `${item.type}:${item.file.id}:${item.file.name}:${item.file.mimeType}`,
-          ),
-        )
-        .join(" | ");
-      const folderUrl = `https://drive.google.com/drive/folders/${encodeURIComponent(applicantFolder.id)}`;
-      const fileColumns = [];
-      for (const [type] of Object.entries(DOCUMENTS)) {
-        const item = uploaded.find((entry) => entry.type === type);
-        if (!item) {
-          fileColumns.push("", "");
-          continue;
-        }
-        const fileId = item.file.id;
-        const previewUrl = `https://drive.google.com/file/d/${encodeURIComponent(fileId)}/view`;
-        const downloadUrl = `https://drive.google.com/uc?export=download&id=${encodeURIComponent(fileId)}`;
-        fileColumns.push(
-          `=HYPERLINK("${previewUrl}","Preview / Xem")`,
-          `=HYPERLINK("${downloadUrl}","Download / Tải")`,
-        );
-      }
+      const pin = randomPin();
+      const salt = randomSalt();
+      const hashedPin = await pinHash(pin, salt);
+      let applicationInserted = false;
       try {
+        await env.DB.prepare(
+          `INSERT INTO applications
+            (application_code, submission_id, pin_salt, pin_hash, full_name,
+             company_name, folder_id, documents_json, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        )
+          .bind(
+            applicationCode,
+            submissionId,
+            salt,
+            hashedPin,
+            fullName,
+            companyName,
+            applicantFolder.id,
+            JSON.stringify(documents),
+            now,
+            now,
+          )
+          .run();
+        applicationInserted = true;
         await appendSheet(token, env, [
           applicationCode,
           now,
           fullName,
           companyName,
           "Mới / New",
-          metadata,
-          `=HYPERLINK("${folderUrl}","Folder hồ sơ")`,
-          ...fileColumns,
+          ...dashboardDocumentCells(submissionId, applicantFolder.id, documents),
         ]);
       } catch (error) {
+        if (applicationInserted)
+          await env.DB.prepare(
+            "DELETE FROM applications WHERE application_code = ? AND submission_id = ?",
+          )
+            .bind(applicationCode, submissionId)
+            .run();
         await Promise.all(
           uploaded.map((item) => deleteDriveFile(token, item.file.id)),
         );
+        await deleteDriveFile(token, applicantFolder.id);
         throw error;
       }
       try {
@@ -812,6 +1189,15 @@ export default {
         JSON.stringify({
           ok: true,
           application_code: applicationCode,
+          pin,
+          resume_url: `${origin && /^https?:\/\//i.test(origin) ? origin : "https://k-anhjobs-visa.pages.dev"}/apply-visa/?resume=${encodeURIComponent(applicationCode)}`,
+          application: {
+            application_code: applicationCode,
+            full_name: fullName,
+            company_name: companyName,
+            updated_at: now,
+            documents,
+          },
           message: "Đã gửi hồ sơ thành công.",
         }),
         {
@@ -822,14 +1208,15 @@ export default {
         },
       );
     } catch (error) {
+      const errorCode = crypto.randomUUID().slice(0, 8).toUpperCase();
       console.error(
-        "Visa submission failed:",
+        `Visa submission failed [${errorCode}]:`,
         error instanceof Error ? error.message : String(error),
       );
       return new Response(
         JSON.stringify({
           ok: false,
-          error: "Không thể gửi hồ sơ. Vui lòng thử lại sau.",
+          error: `${submissionErrorMessage(error)} Mã lỗi: ${errorCode}.`,
         }),
         {
           status: 500,

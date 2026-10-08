@@ -14,5 +14,6 @@ releases/
 .wrangler/
 
 # Local Google credentials (never commit)
+client_secret_*.json
 visa-worker/*service-account*.json
 visa-worker/visa-*.json

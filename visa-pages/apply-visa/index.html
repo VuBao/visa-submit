@@ -27,10 +27,38 @@
           </p>
         </header>
         <div id="visa-alert" class="visa-alert" role="alert" hidden></div>
+        <section class="visa-panel visa-resume-panel">
+          <details id="visa-resume-details">
+            <summary>Đã có mã hồ sơ? / 申請を続ける</summary>
+            <p>
+              Nhập mã hồ sơ và PIN để mở hồ sơ đã lưu và nộp thêm tài liệu.
+            </p>
+            <div class="visa-resume-fields">
+              <label
+                ><b>Mã hồ sơ</b
+                ><input id="visa-resume-code" autocomplete="off"
+              /></label>
+              <label
+                ><b>Mã PIN</b
+                ><input
+                  id="visa-resume-pin"
+                  type="password"
+                  inputmode="numeric"
+                  maxlength="6"
+                  autocomplete="current-password"
+              /></label>
+              <button id="visa-resume-button" type="button" class="visa-button">
+                Mở hồ sơ / 開く
+              </button>
+            </div>
+            <p id="visa-resume-status" class="visa-resume-status" hidden></p>
+          </details>
+        </section>
         <form
           id="visa-application-form"
           class="visa-form"
           enctype="multipart/form-data"
+          novalidate
           data-endpoint="https://k-anhjobs-visa-submit.kanh-cv.workers.dev/api/visa/submit"
         >
           <section class="visa-panel">
@@ -60,8 +88,8 @@
                 <h2>必要書類チェックリスト</h2>
                 <p>Giấy tờ cần upload theo checklist</p>
                 <p class="visa-checklist-note">
-                  Các mục có dấu <b>必須</b> là bắt buộc. Mỗi mặt giấy tờ tải
-                  thành một tệp riêng.
+                  Tất cả giấy tờ đều không bắt buộc. Bạn có thể tải những giấy
+                  tờ hiện đang có; mỗi mặt giấy tờ tải thành một tệp riêng.
                 </p>
               </div>
             </div>
@@ -78,9 +106,10 @@
           </section>
           <section class="visa-submit-panel">
             <label class="visa-consent"
-              ><input type="checkbox" name="consent" value="1" required /><span
-                >個人情報の提供に同意します。<small
-                  >Tôi đồng ý cung cấp thông tin để xử lý hồ sơ visa.</small
+              ><input type="checkbox" name="consent" value="1" /><span
+                >個人情報の提供に同意します（任意）。<small
+                  >Tôi đồng ý cung cấp thông tin để xử lý hồ sơ visa (không bắt
+                  buộc).</small
                 ></span
               ></label
             ><button type="submit" class="visa-button">
@@ -88,8 +117,31 @@
             </button>
           </section>
         </form>
+        <dialog id="visa-result-dialog" class="visa-result-dialog">
+          <div class="visa-result-icon">✓</div>
+          <h2 id="visa-result-title">Đã lưu hồ sơ thành công</h2>
+          <p class="visa-save-warning">
+            Hãy lưu lại thông tin dưới đây. Bạn sẽ cần mã PIN để nộp thêm tài
+            liệu vào lần sau.
+          </p>
+          <dl class="visa-credentials">
+            <div><dt>Mã hồ sơ</dt><dd id="visa-result-code"></dd></div>
+            <div><dt>Mã PIN</dt><dd id="visa-result-pin"></dd></div>
+          </dl>
+          <p>
+            <a id="visa-result-link" href="#">Link tiếp tục hồ sơ</a>
+          </p>
+          <div class="visa-dialog-actions">
+            <button id="visa-copy-result" type="button" class="visa-button">
+              Sao chép thông tin
+            </button>
+            <button id="visa-close-result" type="button" class="visa-button visa-button-light">
+              Đóng
+            </button>
+          </div>
+        </dialog>
       </div>
     </main>
-    <script src="../assets/visa.js"></script>
+    <script src="../assets/visa.js?v=20261008-upload-fix"></script>
   </body>
 </html>

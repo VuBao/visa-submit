@@ -5,5 +5,12 @@
   "compatibility_date": "2026-09-17",
   "vars": {
     "ADMIN_EMAILS": "1102.vubao@gmail.com,hoangkyanh261095@gmail.com"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "k-anhjobs-visa",
+      "database_id": "a651ce91-bc4c-47fe-a136-5068152476cf"
+    }
+  ]
 }
