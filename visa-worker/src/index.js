@@ -55,6 +55,16 @@ const DOCUMENTS = {
     "Giấy tờ bổ sung cho du học sinh",
     false,
   ],
+  student_graduation: [
+    "卒業証明書（見込み可）",
+    "Bằng tốt nghiệp (có thể dùng giấy dự kiến tốt nghiệp)",
+    false,
+  ],
+  student_transcript: [
+    "成績・出席証明書 / 推薦状",
+    "Bảng điểm, chuyên cần hoặc thư giới thiệu",
+    false,
+  ],
 };
 
 const json = (body, status = 200) =>
@@ -565,7 +575,7 @@ async function updateDashboardDocuments(
   await sheetsRequest(
     token,
     env,
-    `/values/${encodeURIComponent(`'Dashboard'!F${rowNumber}:AS${rowNumber}`)}?valueInputOption=USER_ENTERED`,
+    `/values/${encodeURIComponent(`'Dashboard'!F${rowNumber}:AW${rowNumber}`)}?valueInputOption=USER_ENTERED`,
     {
       method: "PUT",
       body: JSON.stringify({
@@ -991,6 +1001,12 @@ export default {
         }
       }
       const files = [];
+      for (const [key, value] of form.entries()) {
+        if (!(value instanceof File) || !value.size) continue;
+        const match = /^documents\[([^\]]+)\](?:\[\])?$/.exec(key);
+        if (key.startsWith("documents[") && (!match || !DOCUMENTS[match[1]]))
+          return json({ ok: false, error: "Loại giấy tờ không được hỗ trợ." }, 422);
+      }
       for (const [type, def] of Object.entries(DOCUMENTS)) {
         const inputFiles = [
           ...form.getAll(`documents[${type}]`),
