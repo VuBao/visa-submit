@@ -54,6 +54,16 @@
             <p id="visa-resume-status" class="visa-resume-status" hidden></p>
           </details>
         </section>
+        <aside id="visa-active-application" class="visa-active-application" hidden>
+          <div>
+            <strong>Hồ sơ đã lưu / 保存済み</strong>
+            <p>Mã hồ sơ: <b id="visa-active-code"></b></p>
+            <p>PIN: <b id="visa-active-pin"></b></p>
+          </div>
+          <button id="visa-copy-active" type="button" class="visa-button visa-button-light">
+            Sao chép mã và PIN
+          </button>
+        </aside>
         <form
           id="visa-application-form"
           class="visa-form"
@@ -88,12 +98,14 @@
                 <h2>必要書類チェックリスト</h2>
                 <p>Giấy tờ cần upload theo checklist</p>
                 <p class="visa-checklist-note">
-                  Tất cả giấy tờ đều không bắt buộc. Bạn có thể tải những giấy
-                  tờ hiện đang có; mỗi mặt giấy tờ tải thành một tệp riêng.
+                  Hồ sơ gồm 4 lượt tải theo nhóm dưới đây. Giấy tờ đều có thể
+                  bổ sung sau; mỗi mặt giấy tờ tải thành một tệp riêng.
                 </p>
               </div>
             </div>
+            <ol id="visa-step-list" class="visa-step-list" aria-label="Bốn lượt tải hồ sơ"></ol>
             <div class="visa-document-grid" id="visa-documents"></div>
+            <p id="visa-step-status" class="visa-step-status" role="status" hidden></p>
             <aside class="visa-prep-note">
               <strong
                 >入社前に準備するもの / Chuẩn bị trước khi vào công ty</strong
@@ -112,9 +124,14 @@
                   buộc).</small
                 ></span
               ></label
-            ><button type="submit" class="visa-button">
-              書類を送信する <span>Gửi hồ sơ</span>
-            </button>
+            ><div class="visa-step-actions">
+              <button id="visa-step-back" type="button" class="visa-button visa-button-light" hidden>
+                ← Lượt trước
+              </button>
+              <button id="visa-step-submit" type="submit" class="visa-button">
+                Lưu lượt 1/4 và tiếp tục →
+              </button>
+            </div>
           </section>
         </form>
         <dialog id="visa-result-dialog" class="visa-result-dialog">
@@ -142,6 +159,6 @@
         </dialog>
       </div>
     </main>
-    <script src="../assets/visa.js?v=20261008-upload-fix"></script>
+    <script src="../assets/visa.js?v=20261008-four-rounds"></script>
   </body>
 </html>

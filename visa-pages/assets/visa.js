@@ -71,10 +71,27 @@
   documentGrid.innerHTML = categories
     .map(
       (category, index) =>
-        `<section class="visa-document-category"><header><span>${String(index + 1).padStart(2, "0")}</span><div><h3>${category.ja}</h3><p>${category.vi}</p></div></header><div class="visa-category-grid">${category.items.map((key) => documentCard(key, docs[key])).join("")}</div></section>`,
+        `<section class="visa-document-category" data-step="${index}" ${index ? "hidden" : ""}><header><span>${String(index + 1).padStart(2, "0")}</span><div><h3>${category.ja}</h3><p>${category.vi}</p></div></header><div class="visa-category-grid">${category.items.map((key) => documentCard(key, docs[key])).join("")}</div></section>`,
+    )
+    .join("");
+  const stepList = document.getElementById("visa-step-list");
+  stepList.innerHTML = categories
+    .map(
+      (category, index) =>
+        `<li data-step="${index}"><span>${index + 1}</span><b>${category.vi}</b><small>${category.ja}</small></li>`,
     )
     .join("");
   const allowed = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+  const categorySections = Array.from(documentGrid.querySelectorAll(".visa-document-category"));
+  const applicantPanel = form.querySelector(".visa-fields").closest(".visa-panel");
+  const stepStatus = document.getElementById("visa-step-status");
+  const backButton = document.getElementById("visa-step-back");
+  const submitButton = document.getElementById("visa-step-submit");
+  const activeApplication = document.getElementById("visa-active-application");
+  const activeCode = document.getElementById("visa-active-code");
+  const activePin = document.getElementById("visa-active-pin");
+  let currentStep = 0;
+  const completedSteps = new Set();
   let lastFocusedCard = null;
   let resumeSession = null;
   const alertBox = document.getElementById("visa-alert");
@@ -103,6 +120,32 @@
     alertBox.hidden = true;
     alertBox.textContent = "";
   };
+
+  const stepButtonLabel = (index) => index === categories.length - 1
+    ? "Lưu lượt 4/4 và hoàn tất"
+    : `Lưu lượt ${index + 1}/4 và tiếp tục →`;
+  const setStep = (index, message = "") => {
+    currentStep = index;
+    lastFocusedCard = null;
+    categorySections.forEach((section, position) => {
+      section.hidden = position !== index;
+    });
+    applicantPanel.hidden = index !== 0;
+    backButton.hidden = index === 0;
+    submitButton.textContent = stepButtonLabel(index);
+    stepList.querySelectorAll("li").forEach((item, position) => {
+      item.classList.toggle("is-current", position === index);
+      item.classList.toggle("is-complete", completedSteps.has(position));
+      if (position === index) item.setAttribute("aria-current", "step");
+      else item.removeAttribute("aria-current");
+    });
+    stepStatus.textContent = message;
+    stepStatus.hidden = !message;
+  };
+  backButton.addEventListener("click", () => {
+    if (currentStep > 0) setStep(currentStep - 1);
+  });
+  setStep(0);
 
   const setResumeStatus = (message, isError = false) => {
     resumeStatus.textContent = message;
@@ -140,8 +183,9 @@
     form.elements.company_name.value = application.company_name || "";
     renderSavedDocuments(application);
     localStorage.setItem("visa_application_code", application.application_code);
-    form.querySelector("button[type=submit]").innerHTML =
-      "追加書類を保存する <span>Lưu tài liệu bổ sung</span>";
+    activeCode.textContent = application.application_code;
+    activePin.textContent = pin;
+    activeApplication.hidden = false;
     setResumeStatus(`Đã mở hồ sơ ${application.application_code}.`);
   };
 
@@ -153,11 +197,17 @@
     resultLink.textContent = result.resume_url;
     document.getElementById("visa-result-title").textContent = result.partial
       ? "Hồ sơ đã lưu, còn tài liệu chưa tải"
-      : result.resumed
-        ? "Đã lưu tài liệu bổ sung"
-        : "Đã lưu hồ sơ thành công";
+      : result.complete
+        ? "Đã hoàn tất 4 lượt tải hồ sơ"
+        : result.firstStage
+          ? "Đã lưu lượt 1/4"
+          : result.resumed
+            ? "Đã lưu tài liệu bổ sung"
+            : "Đã lưu hồ sơ thành công";
     resultDialog.querySelector(".visa-save-warning").textContent = result.partial
       ? `Đã xác nhận tải ${result.savedCount}/${result.total} file. Hãy lưu mã hồ sơ và PIN, kiểm tra những tài liệu đã lưu rồi gửi lại những file còn thiếu. ${result.error || ""}`
+      : result.firstStage
+        ? "Hãy sao chép mã hồ sơ và PIN ngay bây giờ. Đóng hộp thoại để tiếp tục lượt 2/4."
       : "Hãy lưu lại mã hồ sơ và PIN để có thể nộp thêm tài liệu lần sau.";
     document.getElementById("visa-copy-result").textContent = "Sao chép thông tin";
     resultDialog.showModal();
@@ -207,6 +257,12 @@
     const text = `Mã hồ sơ: ${resultCode.textContent}\nMã PIN: ${resultPin.textContent}\nLink tiếp tục: ${resultLink.href}`;
     await navigator.clipboard.writeText(text);
     document.getElementById("visa-copy-result").textContent = "Đã sao chép ✓";
+  });
+  document.getElementById("visa-copy-active").addEventListener("click", async () => {
+    await navigator.clipboard.writeText(
+      `Mã hồ sơ: ${activeCode.textContent}\nMã PIN: ${activePin.textContent}`,
+    );
+    document.getElementById("visa-copy-active").textContent = "Đã sao chép ✓";
   });
 
   const filesFromClipboard = (clipboard) => {
@@ -332,11 +388,14 @@
       invalidField.reportValidity();
       return;
     }
-    const button = form.querySelector("button[type=submit]");
+    const button = submitButton;
     button.disabled = true;
+    backButton.disabled = true;
     button.textContent = "送信中… / Đang gửi…";
     const selected = Array.from(fileInputs).flatMap((input) =>
-      Array.from(input.files || []).map((file) => ({ input, file })),
+      Number(input.closest(".visa-document-category").dataset.step) === currentStep
+        ? Array.from(input.files || []).map((file) => ({ input, file }))
+        : [],
     );
     let savedCount = 0;
     let initialResult = null;
@@ -385,8 +444,6 @@
         sessionStorage.removeItem("visa_pending_submission_id");
         sessionStorage.removeItem("visa_pending_identity");
       }
-      if (resumeSession && !selected.length && !initialResult)
-        throw new Error("Vui lòng chọn tài liệu mới để bổ sung.");
       latestResult = initialResult;
       for (const { input, file } of selected) {
         button.textContent = `Đang tải file ${savedCount + 1}/${selected.length}…`;
@@ -401,12 +458,27 @@
         currentUpload = null;
       }
       if (latestResult?.application) renderSavedDocuments(latestResult.application);
+      completedSteps.add(currentStep);
       clearError();
-      showResult({
-        ...latestResult,
-        pin: resumeSession.pin,
-        resumed: !initialResult,
-      });
+      if (currentStep === categories.length - 1) {
+        showResult({
+          ...latestResult,
+          application_code: resumeSession.code,
+          pin: resumeSession.pin,
+          resume_url: `${location.origin}/apply-visa/?resume=${encodeURIComponent(resumeSession.code)}`,
+          complete: true,
+        });
+        setStep(currentStep, "Đã hoàn tất 4 lượt. Bạn có thể quay lại từng lượt để bổ sung tài liệu.");
+      } else {
+        const completed = currentStep + 1;
+        setStep(
+          completed,
+          `${selected.length ? "Đã lưu" : "Đã bỏ qua"} lượt ${completed}/4. Tiếp tục với ${categories[completed].vi}.`,
+        );
+        if (initialResult)
+          showResult({ ...initialResult, firstStage: true });
+        else documentGrid.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
     } catch (error) {
       const connectionLost =
         error instanceof TypeError || /load failed|failed to fetch/i.test(error.message);
@@ -456,9 +528,8 @@
       }
     } finally {
       button.disabled = false;
-      button.innerHTML = resumeSession
-        ? "追加書類を保存する <span>Lưu tài liệu bổ sung</span>"
-        : "書類を送信する <span>Gửi hồ sơ</span>";
+      backButton.disabled = false;
+      button.textContent = stepButtonLabel(currentStep);
     }
   });
 })();

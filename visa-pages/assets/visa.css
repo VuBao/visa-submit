@@ -540,6 +540,77 @@ body {
   padding-top: 12px;
   border-top: 1px solid #ead8ce;
 }
+
+[hidden] { display: none !important; }
+.visa-active-application {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 20px 0;
+  padding: 16px 20px;
+  border: 1px solid #e9ae47;
+  border-radius: 14px;
+  background: #fff3d5;
+}
+.visa-active-application p { margin: 4px 0 0; overflow-wrap: anywhere; }
+.visa-active-application b { color: #8f360b; }
+.visa-step-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none;
+}
+.visa-step-list li {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 1px 8px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid #ead5ae;
+  border-radius: 12px;
+  background: #fffaf1;
+  color: #6f6255;
+}
+.visa-step-list li > span {
+  display: grid;
+  grid-row: span 2;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: #f7e4bd;
+  font-weight: 800;
+}
+.visa-step-list b { font-size: 13px; }
+.visa-step-list small { font-size: 10px; overflow-wrap: anywhere; }
+.visa-step-list .is-current {
+  border-color: #e56712;
+  background: #fff0d2;
+  color: #47240c;
+  box-shadow: 0 0 0 2px #fbd394;
+}
+.visa-step-list .is-current > span { background: #e56712; color: #fff; }
+.visa-step-list .is-complete > span { background: #36835b; color: #fff; }
+.visa-document-category:not([hidden]) { margin-top: 0; padding-top: 0; border-top: 0; }
+.visa-step-status {
+  margin: 18px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #eaf6ef;
+  color: #236146;
+  font-weight: 700;
+}
+.visa-step-actions { display: flex; justify-content: space-between; gap: 12px; }
+.visa-step-actions .visa-button:last-child { margin-left: auto; }
+@media (max-width: 720px) {
+  .visa-step-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .visa-active-application { flex-direction: column; align-items: stretch; }
+  .visa-step-actions { flex-direction: column-reverse; }
+  .visa-step-actions .visa-button:last-child { margin-left: 0; }
+}
 .visa-file-review img,
 .visa-file-review iframe {
   display: block;
