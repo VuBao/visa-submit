@@ -1,2 +1,4 @@
 /.wrangler/
 /wrangler.jsonc
+/src/
+/.assetsignore

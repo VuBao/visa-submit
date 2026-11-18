@@ -73,6 +73,7 @@ const json = (body, status = 200) =>
     status,
     headers: {
       "content-type": "application/json; charset=utf-8",
+      "cache-control": "no-store",
       "access-control-allow-origin": "*",
       "access-control-allow-methods": "GET, PATCH, POST, DELETE, OPTIONS",
       "access-control-allow-headers": "content-type",
@@ -176,6 +177,7 @@ function publicApplication(application) {
     company_name: application.company_name,
     updated_at: application.updated_at,
     documents: savedDocuments(application).map((item) => ({
+      id: item.id,
       type: item.type,
       name: item.name,
       mime_type: item.mimeType,
@@ -476,6 +478,22 @@ async function deleteDriveFile(token, fileId) {
   );
   if (!response.ok && response.status !== 404)
     throw new Error(`Google Drive delete failed (${response.status})`);
+}
+
+async function setDriveFileTrashed(token, fileId, trashed) {
+  const response = await fetch(
+    `https://www.googleapis.com/drive/v3/files/${encodeURIComponent(fileId)}?supportsAllDrives=true&fields=id,trashed`,
+    {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ trashed }),
+    },
+  );
+  if (!response.ok)
+    throw new Error(`Google Drive file update failed (${response.status})`);
 }
 
 async function driveParentFolder(token, fileId) {
@@ -788,6 +806,66 @@ export default {
         return json({ ok: false, error: "Không thể mở hồ sơ. Vui lòng thử lại." }, 500);
       }
     }
+    if (url.pathname === "/api/visa/delete-document" && request.method === "POST") {
+      try {
+        const body = await request.json();
+        const applicationCode = String(body.application_code || "").trim();
+        const pin = String(body.pin || "").trim();
+        const documentId = String(body.document_id || "").trim();
+        if (!applicationCode || !/^\d{6}$/.test(pin) || !/^[A-Za-z0-9_-]{8,200}$/.test(documentId))
+          return json({ ok: false, error: "Thông tin xóa tài liệu không hợp lệ." }, 422);
+        const authentication = await authenticateApplication(env, applicationCode, pin);
+        if (!authentication.application)
+          return json({ ok: false, error: authentication.error }, authentication.status);
+        const application = authentication.application;
+        const documents = savedDocuments(application);
+        if (!documents.some((item) => item.id === documentId))
+          return json({ ok: false, error: "Tài liệu không còn trong hồ sơ." }, 404);
+        const remaining = documents.filter((item) => item.id !== documentId);
+        const token = await uploadAccessToken(env);
+        let trashed = false;
+        try {
+          await setDriveFileTrashed(token, documentId, true);
+          trashed = true;
+          await updateDashboardDocuments(
+            token, env, applicationCode, application.submission_id,
+            application.folder_id, remaining, application,
+          );
+          const now = new Date().toISOString();
+          await env.DB.prepare(
+            "UPDATE applications SET documents_json = ?, updated_at = ? WHERE application_code = ?",
+          ).bind(JSON.stringify(remaining), now, applicationCode).run();
+          return json({
+            ok: true,
+            application: publicApplication({
+              ...application,
+              documents_json: JSON.stringify(remaining),
+              updated_at: now,
+            }),
+          });
+        } catch (error) {
+          if (trashed) {
+            try {
+              await updateDashboardDocuments(
+                token, env, applicationCode, application.submission_id,
+                application.folder_id, documents, application,
+              );
+            } catch (rollbackError) {
+              console.error("Visa document metadata rollback failed:", rollbackError);
+            }
+            try {
+              await setDriveFileTrashed(token, documentId, false);
+            } catch (rollbackError) {
+              console.error("Visa document Drive rollback failed:", rollbackError);
+            }
+          }
+          throw error;
+        }
+      } catch (error) {
+        console.error("Visa document delete failed:", error);
+        return json({ ok: false, error: "Không thể xóa tài liệu. Vui lòng thử lại." }, 500);
+      }
+    }
     if (url.pathname.startsWith("/api/admin/")) {
       const identity = adminIdentity(request, env);
       if (!identity)
@@ -809,10 +887,34 @@ export default {
               .map((row, index) => applicationFromRow(row, index))
               .filter((item) => item.application_code),
           });
-        const code = decodeURIComponent(url.pathname.split("/")[4] || "");
+        const adminPath = url.pathname.split("/");
+        const code = decodeURIComponent(adminPath[4] || "");
         const found = rows
           .map((row, index) => ({ row, index }))
           .find((item) => item.row[0] === code);
+        if (
+          adminPath.length === 6 && adminPath[5] === "reset-pin" &&
+          adminPath[1] === "api" && adminPath[2] === "admin" &&
+          adminPath[3] === "applications" &&
+          request.method === "POST"
+        ) {
+          if (!found)
+            return json({ ok: false, error: "Application not found." }, 404);
+          const stored = await env.DB.prepare(
+            "SELECT pin_salt, pin_hash FROM applications WHERE application_code = ?",
+          ).bind(code).first();
+          if (!stored)
+            return json({ ok: false, error: "Application not found in the visa database." }, 404);
+          let pin;
+          do {
+            pin = randomPin();
+          } while (sameText(await pinHash(pin, stored.pin_salt), stored.pin_hash));
+          const salt = randomSalt();
+          await env.DB.prepare(
+            "UPDATE applications SET pin_salt = ?, pin_hash = ?, failed_attempts = 0, locked_until = NULL, updated_at = ? WHERE application_code = ?",
+          ).bind(salt, await pinHash(pin, salt), new Date().toISOString(), code).run();
+          return json({ ok: true, application_code: code, pin });
+        }
         if (
           url.pathname.startsWith("/api/admin/applications/") &&
           request.method === "GET"

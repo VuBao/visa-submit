@@ -622,13 +622,40 @@ body {
   color: #236146;
   font-weight: 700;
 }
-.visa-step-actions { display: flex; justify-content: space-between; gap: 12px; }
-.visa-step-actions .visa-button:last-child { margin-left: auto; }
+.visa-step-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: center; gap: 12px; }
+.visa-step-actions #visa-step-back { grid-column: 1; justify-self: start; }
+.visa-step-actions #visa-step-save-exit { grid-column: 2; justify-self: center; }
+.visa-step-actions #visa-step-submit { grid-column: 3; justify-self: end; }
 @media (max-width: 720px) {
   .visa-step-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .visa-active-application { flex-direction: column; align-items: stretch; }
-  .visa-step-actions { flex-direction: column-reverse; }
-  .visa-step-actions .visa-button:last-child { margin-left: 0; }
+  .visa-step-actions { grid-template-columns: 1fr; }
+  .visa-step-actions #visa-step-back,
+  .visa-step-actions #visa-step-save-exit,
+  .visa-step-actions #visa-step-submit { grid-column: 1; justify-self: stretch; }
+}
+.visa-saved-list { display: grid; gap: 6px; margin-top: 10px; }
+.visa-saved-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 9px;
+  border: 1px solid #aed4b5;
+  border-radius: 8px;
+  background: #eaf6ee;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.visa-saved-item span { min-width: 0; }
+.visa-remove-file {
+  flex: none;
+  border: 1px solid #b8563f;
+  border-radius: 6px;
+  background: #fff;
+  color: #913a29;
+  padding: 5px 8px;
+  cursor: pointer;
 }
 .visa-file-review img,
 .visa-file-review iframe {

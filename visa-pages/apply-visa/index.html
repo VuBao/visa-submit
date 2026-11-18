@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>ビザ申請書類の提出 | K-ANH</title>
-    <link rel="stylesheet" href="../assets/visa.css?v=20261008-free-steps" />
+    <link rel="stylesheet" href="../assets/visa.css?v=20261008-save-exit" />
   </head>
   <body>
     <main class="visa-page">
@@ -99,7 +99,8 @@
                 <p>Giấy tờ cần upload theo checklist</p>
                 <p class="visa-checklist-note">
                   Hồ sơ gồm 4 lượt tải theo nhóm dưới đây. Giấy tờ đều có thể
-                  bổ sung sau; mỗi mặt giấy tờ tải thành một tệp riêng.
+                  bổ sung sau; mỗi mặt giấy tờ tải thành một tệp riêng. File chỉ
+                  được gửi khi bấm Kế Tiếp, Lưu &amp; Thoát hoặc Hoàn tất.
                 </p>
               </div>
             </div>
@@ -126,10 +127,13 @@
               ></label
             ><div class="visa-step-actions">
               <button id="visa-step-back" type="button" class="visa-button visa-button-light" hidden>
-                ← Lượt trước
+                ← Quay lại
+              </button>
+              <button id="visa-step-save-exit" type="button" class="visa-button visa-button-light">
+                Lưu &amp; Thoát
               </button>
               <button id="visa-step-submit" type="submit" class="visa-button">
-                Lưu lượt 1/4 và tiếp tục →
+                Kế Tiếp →
               </button>
             </div>
           </section>
@@ -167,6 +171,6 @@
         <button id="visa-entry-resume" type="button" class="visa-button visa-button-light">Nhập tiếp hồ sơ</button>
       </div>
     </dialog>
-    <script src="../assets/visa.js?v=20261008-free-steps"></script>
+    <script src="../assets/visa.js?v=20261008-health-multifile"></script>
   </body>
 </html>

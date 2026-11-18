@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Visa Admin | K-ANH</title>
-    <link rel="stylesheet" href="assets/admin.css?v=20261008-doc-groups" />
+    <link rel="stylesheet" href="assets/admin.css?v=20261008-reset-pin" />
   </head>
   <body>
     <aside class="sidebar">
@@ -85,8 +85,12 @@
             <h2>Thông tin ứng viên</h2>
             <dl id="profile"></dl>
             <h2 class="section-gap">Tài liệu đã nộp</h2>
-            <div id="documentGroups" class="document-groups"></div>
+            <div id="documentGroups" class="document-groups" role="tablist" aria-label="Nhóm tài liệu hồ sơ"></div>
             <div id="documents" class="documents"></div>
+            <div id="documentNavigation" class="document-navigation" hidden>
+              <button id="documentPrevious" type="button" class="back">← Quay lại</button>
+              <button id="documentNext" type="button" class="back">Kế tiếp →</button>
+            </div>
           </div>
           <aside class="card side">
             <h2>Thao tác</h2>
@@ -105,6 +109,6 @@
         </div>
       </section>
     </main>
-    <script src="assets/admin.js?v=20261008-doc-groups"></script>
+    <script src="assets/admin.js?v=20261008-reset-pin"></script>
   </body>
 </html>
